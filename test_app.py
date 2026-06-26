@@ -77,7 +77,7 @@ def test_api_config_post():
     try:
         config = {
             'autostart_type': 'manual',
-            'shutdown_command': 'shutdown /s /t 0',
+            'shutdown_command': ['shutdown', 'now'],
             'restricted_hours': {
                 'workday': [],
                 'weekend': [],

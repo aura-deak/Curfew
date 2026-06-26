@@ -1,0 +1,35 @@
+[project]
+name = "curfew"
+version = "1.0.0"
+description = "Curfew - 电脑定时关机/睡眠工具"
+requires-python = ">=3.8"
+dependencies = [
+    "chinese-calendar>=1.11.0",
+    "flask>=3.0.3",
+    "python-daemon>=3.1.2",
+]
+
+[project.scripts]
+curfew = "curfew:cli"
+
+[tool.setuptools]
+py-modules = ["config", "curfew", "shutdown", "time_check", "date_type", "autostart", "app", "main"]
+include-package-data = true
+
+[tool.uv]
+python-preference = "only-system"
+
+[dependencies]
+flask = "*"
+chinese-calendar = "*"
+python-daemon = "*"
+
+[dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
+]

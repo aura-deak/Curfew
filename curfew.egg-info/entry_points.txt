@@ -1,0 +1,2 @@
+[console_scripts]
+curfew = curfew:cli
