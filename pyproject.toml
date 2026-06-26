@@ -1,6 +1,6 @@
 [project]
 name = "curfew"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Curfew - 电脑定时关机/睡眠工具"
 requires-python = ">=3.8"
 dependencies = [
@@ -22,6 +22,10 @@ curfew = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
 [tool.uv]
 python-preference = "only-system"
 
+[tool.hatch.version]
+source = "vcs"
+tag = true
+
 [dependencies]
 flask = "*"
 chinese-calendar = "*"
@@ -30,9 +34,11 @@ python-daemon = "*"
 [dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
+hatch-vcs = "*"
 
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",
     "pytest-cov>=5.0.0",
+    "hatch-vcs>=0.3.0",
 ]
