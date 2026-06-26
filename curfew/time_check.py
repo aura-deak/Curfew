@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import datetime
-from date_type import get_date_type
+from .date_type import get_date_type
 
 def is_in_restricted_hours(start_hour, start_minute, end_hour, end_minute):
     now = datetime.datetime.now().time()
