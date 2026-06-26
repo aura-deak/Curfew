@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curfew 系统 - 时段管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🕐 时段管理</h1>
+            <nav class="nav">
+                <a href="/">仪表盘</a>
+                <a href="/schedule" class="active">时段管理</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('workday')">📅 工作日</button>
+            <button class="tab" onclick="switchTab('weekend')">🎉 周末</button>
+            <button class="tab" onclick="switchTab('holiday')">🏖️ 节假日</button>
+        </div>
+
+        <div id="tab-workday" class="tab-content active">
+            <div class="card">
+                <h2>工作日限制时段</h2>
+                <div id="time-bar-workday"></div>
+                <ul id="period-list-workday" class="period-list"></ul>
+                <div style="margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">➕ 添加新时段</h3>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>开始时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="start-hour-workday" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="start-minute-workday" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <span style="padding-bottom: 0.8rem;">至</span>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>结束时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="end-hour-workday" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="end-minute-workday" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addPeriod('workday')">添加</button>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">⏱️ 连续使用时间限制</h3>
+                    <div class="form-group">
+                        <label>最大连续使用时长（分钟）</label>
+                        <input type="number" id="continuous-limit-workday" min="0" placeholder="0 表示不启用" style="width: 120px;">
+                        <small style="color: var(--text-secondary);">设置为 0 则不启用</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-weekend" class="tab-content">
+            <div class="card">
+                <h2>周末限制时段</h2>
+                <div id="time-bar-weekend"></div>
+                <ul id="period-list-weekend" class="period-list"></ul>
+                <div style="margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">➕ 添加新时段</h3>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>开始时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="start-hour-weekend" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="start-minute-weekend" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <span style="padding-bottom: 0.8rem;">至</span>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>结束时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="end-hour-weekend" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="end-minute-weekend" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addPeriod('weekend')">添加</button>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">⏱️ 连续使用时间限制</h3>
+                    <div class="form-group">
+                        <label>最大连续使用时长（分钟）</label>
+                        <input type="number" id="continuous-limit-weekend" min="0" placeholder="0 表示不启用" style="width: 120px;">
+                        <small style="color: var(--text-secondary);">设置为 0 则不启用</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-holiday" class="tab-content">
+            <div class="card">
+                <h2>节假日限制时段</h2>
+                <div id="time-bar-holiday"></div>
+                <ul id="period-list-holiday" class="period-list"></ul>
+                <div style="margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">➕ 添加新时段</h3>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>开始时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="start-hour-holiday" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="start-minute-holiday" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <span style="padding-bottom: 0.8rem;">至</span>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>结束时间</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="number" id="end-hour-holiday" min="0" max="23" placeholder="时" style="width: 80px;">
+                                <input type="number" id="end-minute-holiday" min="0" max="59" placeholder="分" style="width: 80px;">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addPeriod('holiday')">添加</button>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">⏱️ 连续使用时间限制</h3>
+                    <div class="form-group">
+                        <label>最大连续使用时长（分钟）</label>
+                        <input type="number" id="continuous-limit-holiday" min="0" placeholder="0 表示不启用" style="width: 120px;">
+                        <small style="color: var(--text-secondary);">设置为 0 则不启用</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+            <a href="/" class="btn btn-secondary">返回主页</a>
+            <button class="btn btn-primary" onclick="saveAllPeriods()">💾 保存配置</button>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Curfew 系统 - 智能宵禁管理</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        let periods = {
+            workday: [],
+            weekend: [],
+            holiday: []
+        };
+
+        let continuousLimits = {
+            workday: 0,
+            weekend: 0,
+            holiday: 0
+        };
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function renderPeriods(tabName) {
+            const listEl = document.getElementById(`period-list-${tabName}`);
+            const timeBarEl = document.getElementById(`time-bar-${tabName}`);
+
+            if (!listEl) return;
+
+            renderTimeBar(periods[tabName], timeBarEl);
+
+            if (periods[tabName].length === 0) {
+                listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">📭</div><p>暂无限制时段</p></li>';
+                return;
+            }
+
+            listEl.innerHTML = periods[tabName].map((period, index) => `
+                <li class="period-item">
+                    <span class="period-time">${formatTime(period.start_hour, period.start_minute)} - ${formatTime(period.end_hour, period.end_minute)}</span>
+                    <div class="period-actions">
+                        <button class="btn btn-secondary" onclick="editPeriod('${tabName}', ${index})">✏️ 编辑</button>
+                        <button class="btn btn-danger" onclick="deletePeriod('${tabName}', ${index})">🗑️ 删除</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        function addPeriod(tabName) {
+            const startHour = parseInt(document.getElementById(`start-hour-${tabName}`).value);
+            const startMinute = parseInt(document.getElementById(`start-minute-${tabName}`).value);
+            const endHour = parseInt(document.getElementById(`end-hour-${tabName}`).value);
+            const endMinute = parseInt(document.getElementById(`end-minute-${tabName}`).value);
+
+            if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+                showNotification('请填写完整的时间', 'error');
+                return;
+            }
+
+            periods[tabName].push({
+                start_hour: startHour,
+                start_minute: startMinute,
+                end_hour: endHour,
+                end_minute: endMinute
+            });
+
+            document.getElementById(`start-hour-${tabName}`).value = '';
+            document.getElementById(`start-minute-${tabName}`).value = '';
+            document.getElementById(`end-hour-${tabName}`).value = '';
+            document.getElementById(`end-minute-${tabName}`).value = '';
+
+            renderPeriods(tabName);
+            showNotification('时段已添加', 'success');
+        }
+
+        function editPeriod(tabName, index) {
+            const period = periods[tabName][index];
+            const newStartHour = prompt('开始小时:', period.start_hour);
+            const newStartMinute = prompt('开始分钟:', period.start_minute);
+            const newEndHour = prompt('结束小时:', period.end_hour);
+            const newEndMinute = prompt('结束分钟:', period.end_minute);
+
+            if (newStartHour !== null && newStartMinute !== null && newEndHour !== null && newEndMinute !== null) {
+                periods[tabName][index] = {
+                    start_hour: parseInt(newStartHour),
+                    start_minute: parseInt(newStartMinute),
+                    end_hour: parseInt(newEndHour),
+                    end_minute: parseInt(newEndMinute)
+                };
+                renderPeriods(tabName);
+                showNotification('时段已更新', 'success');
+            }
+        }
+
+        function deletePeriod(tabName, index) {
+            if (confirm('确定要删除这个时段吗？')) {
+                periods[tabName].splice(index, 1);
+                renderPeriods(tabName);
+                showNotification('时段已删除', 'success');
+            }
+        }
+
+        async function saveAllPeriods() {
+            const config = await loadConfig();
+            if (!config) {
+                config = {
+                    restricted_hours: {
+                        workday: [],
+                        weekend: [],
+                        holiday: []
+                    },
+                    continuous_usage_limits: {
+                        workday: 0,
+                        weekend: 0,
+                        holiday: 0
+                    },
+                    debug: false
+                };
+            }
+
+            config.restricted_hours = periods;
+            config.continuous_usage_limits = {
+                workday: parseInt(document.getElementById('continuous-limit-workday').value) || 0,
+                weekend: parseInt(document.getElementById('continuous-limit-weekend').value) || 0,
+                holiday: parseInt(document.getElementById('continuous-limit-holiday').value) || 0
+            };
+            await saveConfig(config);
+            showNotification('配置已保存', 'success');
+        }
+
+        async function loadPeriods() {
+            const config = await loadConfig();
+            if (!config) return;
+
+            periods = {
+                workday: config.restricted_hours?.workday || [],
+                weekend: config.restricted_hours?.weekend || [],
+                holiday: config.restricted_hours?.holiday || []
+            };
+
+            continuousLimits = {
+                workday: config.continuous_usage_limits?.workday || 0,
+                weekend: config.continuous_usage_limits?.weekend || 0,
+                holiday: config.continuous_usage_limits?.holiday || 0
+            };
+
+            document.getElementById('continuous-limit-workday').value = continuousLimits.workday;
+            document.getElementById('continuous-limit-weekend').value = continuousLimits.weekend;
+            document.getElementById('continuous-limit-holiday').value = continuousLimits.holiday;
+
+            renderPeriods('workday');
+            renderPeriods('weekend');
+            renderPeriods('holiday');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPeriods);
+    </script>
+</body>
+</html>

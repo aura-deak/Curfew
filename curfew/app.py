@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
 import webbrowser
-from config import load_config, save_config, load_status
+from .config import load_config, save_config, load_status
 
 app = Flask(__name__, 
             template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
@@ -35,8 +35,8 @@ def api_save_config():
 
 @app.route('/api/status', methods=['GET'])
 def api_get_status():
-    from date_type import get_date_type
-    from time_check import is_in_restricted_hours_for_today
+    from .date_type import get_date_type
+    from .time_check import is_in_restricted_hours_for_today
 
     config = load_config()
     if config is None:

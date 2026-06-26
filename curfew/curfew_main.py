@@ -4,10 +4,10 @@ import signal
 import sys
 import subprocess
 import argparse
-from config import load_config
-from time_check import is_in_restricted_hours_for_today
-from shutdown import shutdown
-from date_type import get_date_type
+from .config import load_config
+from .time_check import is_in_restricted_hours_for_today
+from .shutdown import shutdown
+from .date_type import get_date_type
 
 def get_uptime_seconds():
     try:
@@ -87,11 +87,11 @@ def run_daemon():
             main(config)
 
 def run_init():
-    import main as main_module
+    from . import main as main_module
     main_module.main()
 
 def run_web():
-    import app as app_module
+    from . import app as app_module
     app_module.webbrowser.open('http://localhost:8080')
     app_module.app.run(debug=True, port=8080)
 

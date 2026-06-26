@@ -10,11 +10,14 @@ dependencies = [
 ]
 
 [project.scripts]
-curfew = "curfew:cli"
+curfew = "curfew.curfew_main:cli"
 
 [tool.setuptools]
-py-modules = ["config", "curfew", "shutdown", "time_check", "date_type", "autostart", "app", "main"]
+packages = ["curfew"]
 include-package-data = true
+
+[tool.setuptools.package-data]
+curfew = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
 
 [tool.uv]
 python-preference = "only-system"

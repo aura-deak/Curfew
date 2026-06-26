@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from config import load_config, save_config
-from autostart import setup_autostart
+from .config import load_config, save_config
+from .autostart import setup_autostart
 import sys
 
 def select_option(options, title, subtitle=""):
