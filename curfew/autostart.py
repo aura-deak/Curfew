@@ -9,21 +9,23 @@ def setup_autostart(autostart_type):
 
 def setup_cron():
     try:
-        uv_path = subprocess.run(['which', 'uv'], capture_output=True, text=True).stdout.strip()
-        if not uv_path:
-            print("未找到 uv 命令，请确保已安装 uv")
+        curfew_path = subprocess.run(['which', 'curfew'], capture_output=True, text=True).stdout.strip()
+        if not curfew_path:
+            print("未找到 curfew 命令，请确保已安装 curfew")
             return
         
-        cron_command = f'@reboot {uv_path} run python curfew.py'
+        cron_command = f'@reboot {curfew_path} daemon'
         
         result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
         current_cron = result.stdout
         
-        if 'curfew.py' in current_cron:
+        if 'curfew daemon' in current_cron:
             print("cron 任务已存在，跳过设置")
             return
         
-        new_cron = current_cron + '\n' + cron_command + '\n'
+        if current_cron and not current_cron.endswith('\n'):
+            current_cron += '\n'
+        new_cron = current_cron + cron_command + '\n'
         
         process = subprocess.Popen(['crontab', '-'], stdin=subprocess.PIPE, text=True)
         process.communicate(input=new_cron)

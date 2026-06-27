@@ -32,7 +32,7 @@ def remove_cron_job():
             return True
         
         lines = current_cron.strip().split('\n')
-        new_lines = [line for line in lines if 'curfew.py' not in line]
+        new_lines = [line for line in lines if 'curfew' not in line]
         
         if len(new_lines) == len(lines):
             print("未找到 curfew cron 任务，跳过移除")

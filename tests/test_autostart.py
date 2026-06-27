@@ -13,7 +13,7 @@ def test_setup_autostart_manual():
         setup_autostart('manual')
         mock_setup_cron.assert_not_called()
 
-def test_setup_cron_uv_not_found():
+def test_setup_cron_curfew_not_found():
     with patch('curfew.autostart.subprocess.run') as mock_run:
         mock_run.return_value.stdout = ''
         mock_run.return_value.stderr = ''
@@ -26,8 +26,8 @@ def test_setup_cron_uv_not_found():
 def test_setup_cron_task_exists():
     with patch('curfew.autostart.subprocess.run') as mock_run:
         mock_run.side_effect = [
-            type('result', (), {'stdout': '/usr/bin/uv', 'stderr': '', 'returncode': 0})(),
-            type('result', (), {'stdout': '@reboot uv run python curfew.py', 'stderr': '', 'returncode': 0})(),
+            type('result', (), {'stdout': '/usr/bin/curfew', 'stderr': '', 'returncode': 0})(),
+            type('result', (), {'stdout': '@reboot /usr/bin/curfew daemon', 'stderr': '', 'returncode': 0})(),
         ]
         
         setup_cron()
@@ -35,7 +35,7 @@ def test_setup_cron_task_exists():
         assert mock_run.call_count == 2
 
 def test_setup_cron_add_task():
-    mock_run_result1 = type('result', (), {'stdout': '/usr/bin/uv', 'stderr': '', 'returncode': 0})()
+    mock_run_result1 = type('result', (), {'stdout': '/usr/bin/curfew', 'stderr': '', 'returncode': 0})()
     mock_run_result2 = type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})()
     
     with patch('curfew.autostart.subprocess.run') as mock_run, \
