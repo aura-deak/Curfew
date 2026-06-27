@@ -9,6 +9,10 @@ dependencies = [
     "python-daemon>=3.1.2",
 ]
 
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
 [project.scripts]
 curfew = "curfew.curfew_main:cli"
 
