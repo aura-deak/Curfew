@@ -1,4 +1,4 @@
-![Stone Badge](https://stone.professorlee.work/api/stone/alu-deak/Curfew)
+!\[Stone Badge]\(https\://stone.professorlee.work/api/stone/alu-deak/Curfew null)
 
 网络上说说就得了，现实中谁不想急头白脸的在readme里养一只石墩子做宠物（
 
@@ -6,7 +6,7 @@
 
 Curfew 是一个智能的开机启动工具，帮助您管理电脑的使用时间，在设定的禁用时段自动执行关机操作。
 
-> [!IMPORTANT]
+> \[!IMPORTANT]
 > 本项目仅支持 Linux 系统。
 >
 > 这是一个不负责任的作者，因为已知的用户只有作者自己。请自行解决旧版兼容性问题。\
@@ -55,7 +55,7 @@ curfew init
 启动 GUI 配置界面：
 
 ```bash
-curfew gui
+curfew web
 ```
 
 访问 `http://localhost:8080` 进行可视化配置管理。
@@ -69,12 +69,11 @@ curfew gui
 curfew
 
 # 启动 Web 管理界面
-curfew gui
+curfew web
 
 # 查看帮助
 curfew -h
 ```
-
 
 ### 开机自启（推荐）
 
@@ -83,7 +82,6 @@ curfew -h
 ```bash
 curfew init  # 在配置向导中选择 cron 自启动
 ```
-
 
 ## 🔧 技术特性
 
@@ -103,6 +101,7 @@ PYTHONPATH=. uv run pytest tests/ -v --cov=.
 ```
 
 测试覆盖：
+
 - 时间检查逻辑
 - 日期类型判断
 - 配置加载/保存
@@ -118,10 +117,10 @@ PYTHONPATH=. uv run pytest tests/ -v --cov=.
 
 ### 环境变量
 
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| CURFEW_CONFIG | 配置文件路径 | config.json |
-| CURFEW_STATUS | 状态文件路径 | status.json |
+| 变量名            | 说明     | 默认值         |
+| -------------- | ------ | ----------- |
+| CURFEW\_CONFIG | 配置文件路径 | config.json |
+| CURFEW\_STATUS | 状态文件路径 | status.json |
 
 ## 💡 小贴士
 
@@ -129,3 +128,4 @@ PYTHONPATH=. uv run pytest tests/ -v --cov=.
 - **权限要求**：设置 cron 任务需要用户权限
 - **测试建议**：首次使用时，建议将 debug 设置为 true 进行测试
 - **日志查看**：daemon 模式下日志输出到标准输出，可通过 systemd journal 或 nohup 查看
+
