@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import time
 import signal
 import sys
@@ -100,22 +101,52 @@ def run_web():
 def run_uninstall():
     uninstall()
 
+def find_git_repo(start_path):
+    current = start_path
+    while current != os.path.dirname(current):
+        if os.path.isdir(os.path.join(current, '.git')):
+            return current
+        current = os.path.dirname(current)
+    return None
+
+def try_git_describe(path):
+    try:
+        result = subprocess.run(['git', 'describe', '--tags'], capture_output=True, text=True, cwd=path)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split('-')[0]
+    except Exception:
+        pass
+    return None
+
 def get_version():
+    module_file = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(module_file))
+    
+    git_repo = find_git_repo(base_dir)
+    if git_repo:
+        ver = try_git_describe(git_repo)
+        if ver:
+            return ver
+    
+    ver = try_git_describe(base_dir)
+    if ver:
+        return ver
+    
+    search_paths = [
+        os.path.expanduser('~/Documents/Curfew'),
+        os.path.expanduser('~/dev/Curfew'),
+        '/opt/Curfew',
+    ]
+    for path in search_paths:
+        if os.path.isdir(os.path.join(path, '.git')):
+            ver = try_git_describe(path)
+            if ver:
+                return ver
+    
     try:
-        v = version('curfew')
-        if v != '0.0.0':
-            return v
+        return version('curfew')
     except Exception:
-        pass
-    try:
-        import os
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        result = subprocess.run(['git', 'describe', '--tags'], capture_output=True, text=True, cwd=project_root)
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except Exception:
-        pass
-    return '0.0.0'
+        return '0.0.0'
 
 def cli():
     __version__ = get_version()
