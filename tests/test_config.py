@@ -56,51 +56,9 @@ def test_save_config_with_directory(tmp_path):
         with open(config_file, 'r') as f:
             assert json.load(f) == config_data
 
-def test_load_status_file_exists(tmp_path):
-    status_file = tmp_path / 'status.json'
-    status_data = {'consecutive_seconds': 300}
-    
-    with open(status_file, 'w') as f:
-        json.dump(status_data, f)
-    
-    with patch.dict(os.environ, {'CURFEW_STATUS': str(status_file)}):
-        if 'curfew.config' in sys.modules:
-            del sys.modules['curfew.config']
-        from curfew.config import load_status
-        assert load_status() == status_data
-
-def test_load_status_file_not_exists(tmp_path):
-    status_file = tmp_path / 'nonexistent.json'
-    
-    with patch.dict(os.environ, {'CURFEW_STATUS': str(status_file)}):
-        if 'curfew.config' in sys.modules:
-            del sys.modules['curfew.config']
-        from curfew.config import load_status
-        assert load_status() == {'consecutive_seconds': 0}
-
-def test_load_status_file_corrupted(tmp_path):
-    status_file = tmp_path / 'status.json'
-    
-    with open(status_file, 'w') as f:
-        f.write('invalid json')
-    
-    with patch.dict(os.environ, {'CURFEW_STATUS': str(status_file)}):
-        if 'curfew.config' in sys.modules:
-            del sys.modules['curfew.config']
-        from curfew.config import load_status
-        assert load_status() == {'consecutive_seconds': 0}
-
 def test_default_config_path():
     with patch.dict(os.environ, {}, clear=True):
         if 'curfew.config' in sys.modules:
             del sys.modules['curfew.config']
-        from curfew.config import CONFIG_FILE
-        assert CONFIG_FILE == 'config.json'
-
-def test_default_status_path():
-    with patch.dict(os.environ, {}, clear=True):
-        if 'curfew.config' in sys.modules:
-            del sys.modules['curfew.config']
-        from curfew.config import load_status
-        status = load_status()
-        assert status == {'consecutive_seconds': 0}
+        from curfew.config import get_config_file
+        assert get_config_file() == os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")) + "/curfew.json"

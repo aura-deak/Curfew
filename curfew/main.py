@@ -1,41 +1,20 @@
 #!/usr/bin/env python3
-from .config import load_config, save_config
+from .config import load_config, save_config, get_config_file
 from .autostart import setup_autostart
 import sys
-
-def select_option(options, title, subtitle=""):
-    print(f"\n{title}")
-    if subtitle:
-        print(subtitle)
-    for i, option in enumerate(options, 1):
-        print(f"{i}. {option}")
-    while True:
-        try:
-            choice = int(input("请选择: ")) - 1
-            if 0 <= choice < len(options):
-                return choice
-            else:
-                print("无效选项，请重新选择")
-        except ValueError:
-            print("无效输入，请输入数字")
+import os
 
 def setup_config():
-    action_options = ["关机", "睡眠"]
-    action_choice = select_option(action_options, "请选择操作类型")
-    
-    autostart_options = ["cron 定时任务", "稍后自行设置"]
-    autostart_choice = select_option(autostart_options, "请选择自启动形式")
-    
-    autostart_map = {
-        0: 'cron',
-        1: 'manual'
-    }
-    autostart_type = autostart_map.get(autostart_choice, 'manual')
-    
-    if action_choice == 0:
+
+    if input("关机（1）或睡眠（2）: ") == '1':
         shutdown_command = ['shutdown', 'now']
     else:
         shutdown_command = ['systemctl', 'suspend']
+    
+    if input("使用 systemd 服务吗？ (Y/n): ").lower() != 'n':
+        autostart_type = 'systemd'
+    else:
+        autostart_type = 'manual'
     
     config = {
         'autostart_type': autostart_type,
@@ -53,8 +32,9 @@ def setup_config():
         'debug': False
     }
     
+    config_file = get_config_file()
     save_config(config)
-    print("配置已保存")
+    print(f"配置已保存到 {config_file}")
     
     print("\n提示：")
     print("- 您尚未配置禁用时段")
@@ -64,8 +44,9 @@ def setup_config():
         setup_autostart(autostart_type)
 
 def main():
+    get_config_file()
     try:
-        config = load_config()
+        load_config()
         print("配置已存在，重新初始化配置...")
     except FileNotFoundError:
         print("首次启动，开始配置")

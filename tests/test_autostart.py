@@ -1,72 +1,69 @@
 #!/usr/bin/env python3
 import pytest
 from unittest.mock import patch, MagicMock
-from curfew.autostart import setup_autostart, setup_cron, create_symlink
+from curfew.autostart import setup_autostart, create_systemd_service
 
-def test_setup_autostart_cron():
-    with patch('curfew.autostart.setup_cron') as mock_setup_cron:
-        setup_autostart('cron')
-        mock_setup_cron.assert_called_once()
+def test_setup_autostart_systemd():
+    with patch('curfew.autostart.create_systemd_service') as mock_create_service:
+        setup_autostart('systemd')
+        mock_create_service.assert_called_once()
 
 def test_setup_autostart_manual():
-    with patch('curfew.autostart.setup_cron') as mock_setup_cron:
+    with patch('curfew.autostart.create_systemd_service') as mock_create_service:
         setup_autostart('manual')
-        mock_setup_cron.assert_not_called()
+        mock_create_service.assert_not_called()
 
-def test_setup_cron_task_exists():
-    with patch('curfew.autostart.subprocess.run') as mock_run, \
-         patch('curfew.autostart.create_symlink', return_value=True):
-        mock_run.return_value = type('result', (), {'stdout': '@reboot curfew daemon', 'stderr': '', 'returncode': 0})()
-        
-        setup_cron()
-        
-        assert mock_run.call_count == 1
-
-def test_setup_cron_add_task():
-    mock_run_result = type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})()
+def test_create_systemd_service_success():
+    mock_run = MagicMock(return_value=type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})())
     
-    with patch('curfew.autostart.subprocess.run') as mock_run, \
-         patch('curfew.autostart.subprocess.Popen') as mock_popen, \
-         patch('curfew.autostart.create_symlink', return_value=True):
+    with patch('curfew.autostart.subprocess.run', mock_run), \
+         patch('curfew.autostart.os.makedirs'), \
+         patch('builtins.open', MagicMock()):
         
-        mock_run.return_value = mock_run_result
-        
-        mock_process = type('process', (), {'communicate': lambda input=None: None, 'returncode': 0})()
-        mock_popen.return_value = mock_process
-        
-        setup_cron()
-        
-        assert mock_run.call_count == 1
-        mock_popen.assert_called_once()
-
-def test_setup_cron_error():
-    with patch('curfew.autostart.subprocess.run') as mock_run, \
-         patch('curfew.autostart.create_symlink', return_value=True):
-        mock_run.side_effect = Exception('test error')
-        
-        setup_cron()
-
-def test_create_symlink_success():
-    mock_result = MagicMock()
-    mock_result.stdout = '软链接已创建'
-    mock_result.stderr = ''
-    mock_result.returncode = 0
-    
-    with patch('curfew.autostart.subprocess.run', return_value=mock_result):
-        result = create_symlink()
+        result = create_systemd_service()
         assert result is True
+        assert mock_run.call_count == 3
 
-def test_create_symlink_failure():
-    mock_result = MagicMock()
-    mock_result.stdout = 'curfew 未安装'
-    mock_result.stderr = ''
-    mock_result.returncode = 1
+def test_create_systemd_service_daemon_reload_fail():
+    def side_effect(args, **kwargs):
+        if 'daemon-reload' in args:
+            return type('result', (), {'stdout': '', 'stderr': 'error', 'returncode': 1})()
+        return type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})()
     
-    with patch('curfew.autostart.subprocess.run', return_value=mock_result):
-        result = create_symlink()
+    with patch('curfew.autostart.subprocess.run', side_effect=side_effect), \
+         patch('curfew.autostart.os.makedirs'), \
+         patch('builtins.open', MagicMock()):
+        
+        result = create_systemd_service()
         assert result is False
 
-def test_create_symlink_exception():
-    with patch('curfew.autostart.subprocess.run', side_effect=Exception('test error')):
-        result = create_symlink()
+def test_create_systemd_service_enable_fail():
+    def side_effect(args, **kwargs):
+        if 'enable' in args:
+            return type('result', (), {'stdout': '', 'stderr': 'error', 'returncode': 1})()
+        return type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})()
+    
+    with patch('curfew.autostart.subprocess.run', side_effect=side_effect), \
+         patch('curfew.autostart.os.makedirs'), \
+         patch('builtins.open', MagicMock()):
+        
+        result = create_systemd_service()
+        assert result is False
+
+def test_create_systemd_service_start_fail():
+    def side_effect(args, **kwargs):
+        if 'start' in args:
+            return type('result', (), {'stdout': '', 'stderr': 'error', 'returncode': 1})()
+        return type('result', (), {'stdout': '', 'stderr': '', 'returncode': 0})()
+    
+    with patch('curfew.autostart.subprocess.run', side_effect=side_effect), \
+         patch('curfew.autostart.os.makedirs'), \
+         patch('builtins.open', MagicMock()):
+        
+        result = create_systemd_service()
+        assert result is False
+
+def test_create_systemd_service_exception():
+    with patch('curfew.autostart.os.makedirs', side_effect=Exception('test error')):
+        result = create_systemd_service()
         assert result is False

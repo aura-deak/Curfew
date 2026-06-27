@@ -1,56 +1,57 @@
 #!/usr/bin/env python3
+from .config import get_systemd_service_file
 import subprocess
 import os
 
-SYMLINK_PATH = '/usr/local/bin/curfew'
+systemd_service_dir = os.path.expanduser('~/.config/systemd/user')
+systemd_service_file = get_systemd_service_file()
 
-def get_scripts_path():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
-
-def create_symlink():
+def create_systemd_service():
     try:
-        script_path = os.path.join(get_scripts_path(), 'create_symlink.sh')
-        result = subprocess.run(['pkexec', 'env', 'HOME=' + os.environ.get('HOME', ''), 'bash', script_path], capture_output=True, text=True)
+        os.makedirs(systemd_service_dir, exist_ok=True)
         
-        print(result.stdout)
-        if result.stderr:
-            print(result.stderr)
+        service_content = f'''[Unit]
+Description=Curfew - 电脑定时关机/睡眠工具
+After=graphical.target
+
+[Service]
+Type=simple
+ExecStart={os.path.expanduser('~/.local/bin/curfew')} daemon
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+'''
         
-        if result.returncode == 0:
-            return True
-        else:
+        with open(systemd_service_file, 'w') as f:
+            f.write(service_content)
+        
+        print(f"systemd 服务文件已创建: {systemd_service_file}")
+        
+        result = subprocess.run(['systemctl', '--user', 'daemon-reload'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"daemon-reload 失败: {result.stderr}")
             return False
+        
+
+        result = subprocess.run(['systemctl', '--user', 'enable', 'curfew'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"enable 失败: {result.stderr}")
+            return False
+        
+        result = subprocess.run(['systemctl', '--user', 'start', 'curfew'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"start 失败: {result.stderr}")
+            return False
+        
+        print("systemd 服务已启用并启动")
+        return True
     except Exception as e:
-        print(f"创建软链接失败: {e}")
+        print(f"创建 systemd 服务失败: {e}")
         return False
 
 def setup_autostart(autostart_type):
-    if autostart_type == 'cron':
-        setup_cron()
+    if autostart_type == 'systemd':
+        create_systemd_service()
     else:
         print("请稍后自行设置自启动")
-
-def setup_cron():
-    try:
-        create_symlink()
-        
-        cron_command = f'@reboot curfew daemon'
-        
-        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
-        current_cron = result.stdout
-        
-        if 'curfew daemon' in current_cron:
-            print("cron 任务已存在，跳过设置")
-            return
-        
-        new_cron = current_cron + '\n' + cron_command + '\n'
-        
-        process = subprocess.Popen(['crontab', '-'], stdin=subprocess.PIPE, text=True)
-        process.communicate(input=new_cron)
-        
-        if process.returncode == 0:
-            print("cron 定时任务已设置")
-        else:
-            print("设置 cron 定时任务失败")
-    except Exception as e:
-        print(f"设置 cron 定时任务失败: {e}")
