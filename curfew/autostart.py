@@ -1,47 +1,24 @@
 #!/usr/bin/env python3
 import subprocess
 import os
-import pexpect
 
 SYMLINK_PATH = '/usr/local/bin/curfew'
 
-def get_installed_curfew_path():
-    return os.path.expanduser('~/.local/bin/curfew')
+def get_scripts_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
 
 def create_symlink():
     try:
-        target_path = get_installed_curfew_path()
+        script_path = os.path.join(get_scripts_path(), 'create_symlink.sh')
+        result = subprocess.run(['pkexec', 'env', 'HOME=' + os.environ.get('HOME', ''), 'bash', script_path], capture_output=True, text=True)
         
-        if not os.path.exists(target_path):
-            print(f"curfew 未安装在 {target_path}")
-            print("请先运行 'uv tool install --python-preference only-system .' 安装 curfew")
-            return False
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
         
-        if os.path.exists(SYMLINK_PATH) or os.path.islink(SYMLINK_PATH):
-            try:
-                child = pexpect.spawn(f'sudo rm -f {SYMLINK_PATH}')
-                child.expect(['password:', pexpect.EOF])
-                if 'password:' in child.before.decode():
-                    print("需要 sudo 权限删除旧的软链接，请输入密码：")
-                    child.sendline(os.environ.get('SUDO_PASSWORD', ''))
-                child.expect(pexpect.EOF)
-                child.close()
-            except pexpect.exceptions.EOF:
-                pass
-        
-        child = pexpect.spawn(f'sudo ln -sf {target_path} {SYMLINK_PATH}')
-        child.expect(['password:', pexpect.EOF])
-        if 'password:' in child.before.decode():
-            print("需要 sudo 权限创建软链接，请输入密码：")
-            child.sendline(os.environ.get('SUDO_PASSWORD', ''))
-        child.expect(pexpect.EOF)
-        child.close()
-        
-        if child.exitstatus == 0:
-            print(f"软链接已创建: {SYMLINK_PATH} -> {target_path}")
+        if result.returncode == 0:
             return True
         else:
-            print("创建软链接失败")
             return False
     except Exception as e:
         print(f"创建软链接失败: {e}")

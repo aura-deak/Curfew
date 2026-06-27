@@ -47,54 +47,26 @@ def test_setup_cron_error():
         setup_cron()
 
 def test_create_symlink_success():
-    mock_spawn = MagicMock()
-    mock_spawn.before = b''
-    mock_spawn.exitstatus = 0
+    mock_result = MagicMock()
+    mock_result.stdout = '软链接已创建'
+    mock_result.stderr = ''
+    mock_result.returncode = 0
     
-    with patch('curfew.autostart.pexpect.spawn', return_value=mock_spawn), \
-         patch('curfew.autostart.os.path.exists', return_value=True), \
-         patch('curfew.autostart.os.path.islink', return_value=False):
-        
-        result = create_symlink()
-        assert result is True
-
-def test_create_symlink_target_not_exists():
-    with patch('curfew.autostart.os.path.exists', return_value=False):
-        result = create_symlink()
-        assert result is False
-
-def test_create_symlink_existing_link():
-    mock_spawn = MagicMock()
-    mock_spawn.before = b''
-    mock_spawn.exitstatus = 0
-    
-    with patch('curfew.autostart.pexpect.spawn', return_value=mock_spawn), \
-         patch('curfew.autostart.os.path.exists', return_value=True), \
-         patch('curfew.autostart.os.path.islink', return_value=True):
-        
-        result = create_symlink()
-        assert result is True
-
-def test_create_symlink_sudo_password():
-    mock_spawn = MagicMock()
-    mock_spawn.before = b'password:'
-    mock_spawn.exitstatus = 0
-    
-    with patch('curfew.autostart.pexpect.spawn', return_value=mock_spawn), \
-         patch('curfew.autostart.os.path.exists', return_value=True), \
-         patch('curfew.autostart.os.path.islink', return_value=False):
-        
+    with patch('curfew.autostart.subprocess.run', return_value=mock_result):
         result = create_symlink()
         assert result is True
 
 def test_create_symlink_failure():
-    mock_spawn = MagicMock()
-    mock_spawn.before = b''
-    mock_spawn.exitstatus = 1
+    mock_result = MagicMock()
+    mock_result.stdout = 'curfew 未安装'
+    mock_result.stderr = ''
+    mock_result.returncode = 1
     
-    with patch('curfew.autostart.pexpect.spawn', return_value=mock_spawn), \
-         patch('curfew.autostart.os.path.exists', return_value=True), \
-         patch('curfew.autostart.os.path.islink', return_value=False):
-        
+    with patch('curfew.autostart.subprocess.run', return_value=mock_result):
+        result = create_symlink()
+        assert result is False
+
+def test_create_symlink_exception():
+    with patch('curfew.autostart.subprocess.run', side_effect=Exception('test error')):
         result = create_symlink()
         assert result is False
