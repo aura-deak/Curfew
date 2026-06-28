@@ -16,8 +16,10 @@ After=graphical.target
 
 [Service]
 Type=simple
-ExecStart={os.path.expanduser('~/.local/bin/curfew')} daemon
+ExecStart={os.path.expanduser('~/.local/bin/curfew')}
 Restart=on-failure
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=default.target

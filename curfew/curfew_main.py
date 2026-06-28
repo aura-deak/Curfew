@@ -80,13 +80,11 @@ def main(config):
     print("Curfew 退出")
 
 def run_daemon():
+    """
+    这里原有是使用daemon，现在改为前台运行，仍然叫daemon是遗留。
+    """
     config = load_config()
-    if config.get('debug', False):
-        main(config)
-    else:
-        from daemon import DaemonContext
-        with DaemonContext():
-            main(config)
+    main(config)
 
 def run_init():
     from . import main as main_module
