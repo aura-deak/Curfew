@@ -50,6 +50,11 @@ curfew init
 - 选择自启动方式（systemd/手动）
 - 配置关机命令
 
+> [!NOTE]  
+> 推荐项目[aura-deak/white-list-killer](https://github.com/aura-deak/white-list-killer)  
+> 把关机命令配置成`python killer.py loop`（绝对路径），可实现定时白名单效果！  
+> 注：`python killer.py loop`还没有优雅的退出方式，目前的退出方式是重启  
+
 ### 4. 启动 Web 界面
 
 启动 GUI 配置界面：
