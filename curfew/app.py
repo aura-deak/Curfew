@@ -37,7 +37,7 @@ def api_save_config():
 def api_get_status():
     from .date_type import get_date_type
     from .time_check import is_in_restricted_hours_for_today
-    from .curfew_main import get_uptime_seconds
+    from .curfew_main import get_active_time
 
     config = load_config()
     if config is None:
@@ -46,7 +46,7 @@ def api_get_status():
     date_type = get_date_type()
     is_in_curfew = is_in_restricted_hours_for_today(config.get('restricted_hours', {}))
     now = datetime.now().strftime('%H:%M:%S')
-    consecutive_seconds = get_uptime_seconds()
+    consecutive_seconds = get_active_time()
 
     return jsonify({
         'date_type': date_type,

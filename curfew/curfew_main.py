@@ -11,12 +11,15 @@ from .shutdown import shutdown
 from .date_type import get_date_type
 from .uninstaller import uninstall
 
-def get_uptime_seconds():
-    try:
-        result = subprocess.run(['bash', '-c', 'uptime -r | awk \'{print int($2)}\''], capture_output=True, text=True)
-        return int(result.stdout.strip())
-    except Exception:
-        return 0
+def get_active_time():
+    """
+    使用系统活跃时间代替uptime。
+    uptime是系统开机时间，不受suspend影响
+    如果中途有过suspend，uptime就无法表示使用时间
+    之所以放着这个函数不动，一方面怕以后还要改，一方面其他代码能不动就不动
+    """
+    return int(time.monotonic())
+
 
 def signal_handler(signum, frame):
     print(f"收到信号 {signum}，准备退出...")
@@ -66,7 +69,7 @@ def main(config):
             current_limit = continuous_usage_limits.get(current_date_type, 0)
             
             if current_limit > 0:
-                uptime_seconds = get_uptime_seconds()
+                uptime_seconds = get_active_time()
                 if uptime_seconds >= current_limit * 60:
                     print(f"连续使用时间超过限制（{current_limit}分钟），当前运行时间: {uptime_seconds // 60}分钟")
                     break
