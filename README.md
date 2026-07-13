@@ -28,7 +28,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 2. 安装 curfew 命令
 
-将 curfew 安装为全局命令，可在任何地方直接调用：
+将 curfew 安装为全局命令，可在任何地方直接调用：  
+**注意：更新源码不会自动更新全局命令，请重新安装。**
 
 ```bash
 uv tool install --python-preference only-system .
