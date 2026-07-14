@@ -10,7 +10,7 @@ from curfew.date_type import get_date_type
 from curfew.shutdown import shutdown
 from curfew.time_check import is_in_restricted_hours_for_today
 from curfew.uninstaller import uninstall
-from timer import get_active_time
+from curfew.timer import get_active_time
 
 
 def signal_handler(signum, frame):

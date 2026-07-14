@@ -37,7 +37,7 @@ def api_save_config():
 def api_get_status():
     from curfew.date_type import get_date_type
     from curfew.time_check import is_in_restricted_hours_for_today
-    from timer import get_active_time
+    from curfew.timer import get_active_time
 
     config = load_config()
     if config is None:
