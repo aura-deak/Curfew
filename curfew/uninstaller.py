@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from .config import get_systemd_service_file, get_config_file
+from curfew.config import get_systemd_service_file, get_config_file
 import os
 import subprocess
 

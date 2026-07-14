@@ -1,24 +1,16 @@
 #!/usr/bin/env python3
-import time
+import argparse
 import signal
 import sys
-import subprocess
-import argparse
+import time
 from importlib.metadata import version
-from .config import load_config
-from .time_check import is_in_restricted_hours_for_today
-from .shutdown import shutdown
-from .date_type import get_date_type
-from .uninstaller import uninstall
 
-def get_active_time():
-    """
-    使用系统活跃时间代替uptime。
-    uptime是系统开机时间，不受suspend影响
-    如果中途有过suspend，uptime就无法表示使用时间
-    之所以放着这个函数不动，一方面怕以后还要改，一方面其他代码能不动就不动
-    """
-    return int(time.monotonic())
+from curfew.config import load_config
+from curfew.date_type import get_date_type
+from curfew.shutdown import shutdown
+from curfew.time_check import is_in_restricted_hours_for_today
+from curfew.uninstaller import uninstall
+from timer import get_active_time
 
 
 def signal_handler(signum, frame):
@@ -90,11 +82,11 @@ def run_daemon():
     main(config)
 
 def run_init():
-    from . import main as main_module
+    import curfew.main as main_module
     main_module.main()
 
 def run_web():
-    from . import app as app_module
+    import curfew.app as app_module
     app_module.webbrowser.open('http://localhost:8080')
     app_module.app.run(debug=True, port=8080)
 

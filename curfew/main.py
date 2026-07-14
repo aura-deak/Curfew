@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from .config import load_config, save_config, get_config_file
-from .autostart import setup_autostart
+from curfew.config import load_config, save_config, get_config_file
+from curfew.autostart import setup_autostart
 import sys
 import os
 
