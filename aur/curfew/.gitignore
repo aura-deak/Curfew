@@ -1,0 +1,5 @@
+# AUR git repo - 只需要上传 PKGBUILD 和 .SRCINFO
+/*
+!/PKGBUILD
+!/.SRCINFO
+!.gitignore

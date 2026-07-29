@@ -9,7 +9,6 @@ curfew/curfew_main.py
 curfew/date_type.py
 curfew/main.py
 curfew/shutdown.py
-curfew/time_check.py
 curfew/uninstaller.py
 curfew.egg-info/PKG-INFO
 curfew.egg-info/SOURCES.txt

@@ -1,0 +1,22 @@
+pkgbase = curfew
+	pkgdesc = Curfew - 电脑定时关机/睡眠工具，智能管理电脑使用时间
+	pkgver = 2.6
+	pkgrel = 1
+	url = https://github.com/aura-deak/Curfew
+	arch = any
+	license = GPL3
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-hatchling
+	makedepends = python-hatch-vcs
+	makedepends = git
+	depends = python
+	depends = python-flask
+	depends = python-chinese-calendar
+	depends = python-daemon
+	provides = curfew
+	conflicts = curfew
+	source = curfew-2.6.tar.gz::https://github.com/aura-deak/Curfew/archive/refs/tags/v2.6.tar.gz
+	sha256sums = SKIP
+
+pkgname = curfew

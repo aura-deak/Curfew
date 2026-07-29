@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pytest
 from unittest.mock import patch, MagicMock
-from timer import get_active_time
+from curfew.timer import get_active_time
 
 
 def test_get_uptime_seconds():

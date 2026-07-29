@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import logging
 import subprocess
 import threading
-import logging
 
 """
 妈的，收个信号这么麻烦，就为了解决个suspend的问题

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import datetime
 import sys
+
 from chinese_calendar import get_holiday_detail, is_workday
+
 
 def get_date_type(date=None):
     if date is None:

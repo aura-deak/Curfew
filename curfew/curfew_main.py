@@ -1,21 +1,56 @@
 #!/usr/bin/env python3
-import argparse
+import datetime
 import signal
 import sys
 import time
-from importlib.metadata import version
+
+import plyer
 
 from curfew.config import load_config
 from curfew.date_type import get_date_type
 from curfew.shutdown import shutdown
-from curfew.time_check import is_in_restricted_hours_for_today
-from curfew.uninstaller import uninstall
 from curfew.timer import get_active_time
 
 
 def signal_handler(signum, frame):
     print(f"收到信号 {signum}，准备退出...")
     sys.exit(0)
+
+
+def is_in_restricted_hours(start_hour, start_minute, end_hour, end_minute):
+    now = datetime.datetime.now().time()
+    start_time = datetime.time(start_hour, start_minute)
+    end_time = datetime.time(end_hour, end_minute)
+
+    if start_time < end_time:
+        return start_time <= now <= end_time
+    else:
+        return now >= start_time or now <= end_time
+
+def is_within_five_minutes_of_restricted_time(start_hour, start_minute):
+    now = datetime.datetime.now().time()
+    start_time = datetime.time(start_hour, start_minute)
+    five_minutes_later = (datetime.datetime.combine(datetime.date.today(), start_time) + datetime.timedelta(minutes=5)).time()
+    return start_time <= now <= five_minutes_later
+
+def is_in_restricted_hours_for_today(restricted_hours_dict):
+    date_type = get_date_type()
+
+    if date_type not in restricted_hours_dict:
+        return False
+
+    hours_list = restricted_hours_dict.get(date_type, [])
+
+    for period in hours_list:
+        if is_in_restricted_hours(
+                period['start_hour'],
+                period['start_minute'],
+                period['end_hour'],
+                period['end_minute']
+        ):
+            return True
+    return False
+
 
 def main(config):
     restricted_hours_dict = config.get('restricted_hours', {})
@@ -56,6 +91,12 @@ def main(config):
         if is_in_restricted_hours_for_today(restricted_hours_dict):
             print("检测到当前时间在禁用时段内")
             break
+        elif is_within_five_minutes_of_restricted_time():
+            plyer.notification.notify(
+                title="Curfew 提醒",
+                message="距离禁用时段开始还有不到 5 分钟，请保存工作并准备关机。",
+                timeout=10
+            )
         else:
             current_date_type = get_date_type()
             current_limit = continuous_usage_limits.get(current_date_type, 0)
@@ -74,67 +115,6 @@ def main(config):
     
     print("Curfew 退出")
 
-def run_daemon():
-    """
-    这里原有是使用daemon，现在改为前台运行，仍然叫daemon是遗留。
-    """
+if __name__ == "__main__":
     config = load_config()
     main(config)
-
-def run_init():
-    import curfew.main as main_module
-    main_module.main()
-
-def run_web():
-    import curfew.app as app_module
-    app_module.webbrowser.open('http://localhost:8080')
-    app_module.app.run(debug=True, port=8080)
-
-def run_uninstall():
-    uninstall()
-
-def get_version():
-    try:
-        return version('curfew')
-    except Exception:
-        return '0.0.0'
-
-def cli():
-    __version__ = get_version()
-    
-    parser = argparse.ArgumentParser(
-        prog='curfew',
-        description='Curfew - 电脑定时关机/睡眠工具',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''示例用法:
-  curfew              以 daemon 模式启动（默认）
-  curfew daemon       以 daemon 模式启动
-  curfew init         初始化配置
-  curfew web          启动 Web 管理界面
-  curfew uninstall    卸载并清除配置
-  curfew -v           显示版本信息
-  curfew -h           显示帮助信息'''
-    )
-    
-    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}', help='显示版本信息')
-    
-    subparsers = parser.add_subparsers(dest='command', help='可用子命令')
-    
-    subparsers.add_parser('daemon', help='以 daemon 模式启动（默认）')
-    subparsers.add_parser('init', help='初始化配置，执行配置向导')
-    subparsers.add_parser('web', help='启动 Web 管理界面')
-    subparsers.add_parser('uninstall', help='卸载并清除系统配置')
-    
-    args = parser.parse_args()
-    
-    if args.command is None or args.command == 'daemon':
-        run_daemon()
-    elif args.command == 'init':
-        run_init()
-    elif args.command == 'web':
-        run_web()
-    elif args.command == 'uninstall':
-        run_uninstall()
-
-if __name__ == "__main__":
-    cli()

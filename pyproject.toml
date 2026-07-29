@@ -6,6 +6,7 @@ requires-python = ">=3.8"
 dependencies = [
     "chinese-calendar>=1.11.0",
     "flask>=3.0.3",
+    "plyer>=2.1.0",
     "python-daemon>=3.1.2",
 ]
 
@@ -14,7 +15,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-curfew = "curfew.curfew_main:cli"
+curfew = "curfew.command_main:cli"
 
 [tool.setuptools]
 packages = ["curfew"]

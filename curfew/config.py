@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-import os
 import json
+import os
+
 
 def get_config_file():
-    return os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")) + "/curfew/config.json"
+    if os.environ.get("CURFEW_CONFIG"):
+        return os.environ["CURFEW_CONFIG"]
+    return os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")) + "/curfew.json"
 
 def get_systemd_service_file():
     return os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")) + "/systemd/user/curfew.service"
@@ -15,7 +18,7 @@ def load_config():
             config = json.load(f)
         return config
     
-    raise FileNotFoundError("配置文件不存在，请先运行 main.py 进行配置")
+    raise FileNotFoundError("配置文件不存在，请先运行 init.py 进行配置")
 
 def save_config(config):
     config_file = get_config_file()

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import os
-from flask import Flask, render_template, jsonify, request
-from datetime import datetime
 import webbrowser
+from datetime import datetime
+
+from flask import Flask, render_template, jsonify, request
+
 from curfew.config import load_config, save_config
 
 app = Flask(__name__, 
@@ -36,7 +38,7 @@ def api_save_config():
 @app.route('/api/status', methods=['GET'])
 def api_get_status():
     from curfew.date_type import get_date_type
-    from curfew.time_check import is_in_restricted_hours_for_today
+    from curfew.curfew_main import is_in_restricted_hours_for_today
     from curfew.timer import get_active_time
 
     config = load_config()

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from curfew.config import get_systemd_service_file
-import subprocess
 import os
+import subprocess
+
+from curfew.config import get_systemd_service_file
 
 systemd_service_dir = os.path.expanduser('~/.config/systemd/user')
 systemd_service_file = get_systemd_service_file()
