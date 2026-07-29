@@ -27,12 +27,6 @@ def is_in_restricted_hours(start_hour, start_minute, end_hour, end_minute):
     else:
         return now >= start_time or now <= end_time
 
-def is_within_five_minutes_of_restricted_time(start_hour, start_minute):
-    now = datetime.datetime.now().time()
-    start_time = datetime.time(start_hour, start_minute)
-    five_minutes_later = (datetime.datetime.combine(datetime.date.today(), start_time) + datetime.timedelta(minutes=5)).time()
-    return start_time <= now <= five_minutes_later
-
 def is_in_restricted_hours_for_today(restricted_hours_dict):
     date_type = get_date_type()
 
@@ -51,9 +45,32 @@ def is_in_restricted_hours_for_today(restricted_hours_dict):
             return True
     return False
 
+def is_within_five_minutes_of_restricted_time(start_hour, start_minute):
+    now = datetime.datetime.now().time()
+    start_time = datetime.time(start_hour, start_minute)
+    five_minutes_later = (
+                 datetime.datetime.combine(datetime.date.today(), start_time) + datetime.timedelta(minutes=5)).time()
+    return start_time <= now <= five_minutes_later
+
+def is_is_within_five_minutes_of_restricted_time_for_today(restricted_hours_dict):
+    date_type = get_date_type()
+
+    if date_type not in restricted_hours_dict:
+        return False
+
+    hours_list = restricted_hours_dict.get(date_type, [])
+
+    for period in hours_list:
+        if is_within_five_minutes_of_restricted_time(
+                period['start_hour'],
+                period['start_minute'],
+        ):
+            return True
+    return False
 
 def main(config):
     restricted_hours_dict = config.get('restricted_hours', {})
+
     continuous_usage_limits = config.get('continuous_usage_limits', {})
     check_interval = 1
     debug = config.get('debug', False)
@@ -91,12 +108,13 @@ def main(config):
         if is_in_restricted_hours_for_today(restricted_hours_dict):
             print("检测到当前时间在禁用时段内")
             break
-        elif is_within_five_minutes_of_restricted_time():
+        elif is_is_within_five_minutes_of_restricted_time_for_today(restricted_hours_dict):
             plyer.notification.notify(
                 title="Curfew 提醒",
                 message="距离禁用时段开始还有不到 5 分钟，请保存工作并准备关机。",
                 timeout=10
             )
+            print("距离禁用时段开始还有不到 5 分钟")
         else:
             current_date_type = get_date_type()
             current_limit = continuous_usage_limits.get(current_date_type, 0)
@@ -106,6 +124,13 @@ def main(config):
                 if uptime_seconds >= current_limit * 60:
                     print(f"连续使用时间超过限制（{current_limit}分钟），当前运行时间: {uptime_seconds // 60}分钟")
                     break
+                elif uptime_seconds >= (current_limit - 5) * 60 :
+                    plyer.notification.notify(
+                        title="Curfew 提醒",
+                        message=f"距离连续使用时间限制结束还有不到 5 分钟，请保存工作并准备关机。",
+                        timeout=10
+                    )
+                    print(f"距离连续使用时间限制结束还有不到 5 分钟")
             
             print(f"当前时间不在禁用时段内（{date_type_names[current_date_type]}），1秒后再次检测")
             time.sleep(check_interval)
