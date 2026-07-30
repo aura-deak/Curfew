@@ -18,14 +18,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update PKGBUILD
+      - name: Update PKGBUILD and .SRCINFO
         run: |
+          set -e
           PKG_DIR="aur/python-chinese-calendar"
           VERSION="${{ inputs.version }}"
           SHA256="${{ inputs.sha256sum }}"
 
           cd "$PKG_DIR"
-          . PKGBUILD
 
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
@@ -33,28 +33,27 @@ jobs:
           sed -i "s|^sha256sums=.*|sha256sums=('${SHA256}')|" PKGBUILD
 
           . PKGBUILD
-          makepkg --printsrcinfo > .SRCINFO 2>/dev/null || {
-            echo "makepkg not available, generating .SRCINFO manually..."
-            cat > .SRCINFO << SRCINFO
-pkgbase = ${pkgname}
-	pkgdesc = ${pkgdesc}
-	pkgver = ${pkgver}
-	pkgrel = ${pkgrel}
-	url = ${url}
-	arch = ${arch}
-	license = ${license}
-	makedepends = python-build
-	makedepends = python-installer
-	depends = python
-	source = https://files.pythonhosted.org/packages/source/c/chinese-calendar/chinese_calendar-${VERSION}.tar.gz
-	sha256sums = ${SHA256}
 
-pkgname = ${pkgname}
-SRCINFO
-          }
+          cat > .SRCINFO <<- EOF
+          pkgbase = ${pkgname}
+          	pkgdesc = ${pkgdesc}
+          	pkgver = ${pkgver}
+          	pkgrel = ${pkgrel}
+          	url = ${url}
+          	arch = ${arch}
+          	license = ${license}
+          	makedepends = python-build
+          	makedepends = python-installer
+          	depends = python
+          	source = https://files.pythonhosted.org/packages/source/c/chinese-calendar/chinese_calendar-${VERSION}.tar.gz
+          	sha256sums = ${SHA256}
+
+          pkgname = ${pkgname}
+          EOF
 
       - name: Push to AUR
         run: |
+          set -e
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
