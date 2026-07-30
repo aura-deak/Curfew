@@ -103,7 +103,9 @@ def main(config):
     
     current_date_type = get_date_type()
     print(f"\n当前日期类型: {date_type_names[current_date_type]}")
-    
+
+    remind_times = 0
+
     while True:
         if is_in_restricted_hours_for_today(restricted_hours_dict):
             print("检测到当前时间在禁用时段内")
@@ -124,12 +126,13 @@ def main(config):
                 if uptime_seconds >= current_limit * 60:
                     print(f"连续使用时间超过限制（{current_limit}分钟），当前运行时间: {uptime_seconds // 60}分钟")
                     break
-                elif uptime_seconds >= (current_limit - 5) * 60 :
+                elif uptime_seconds >= (current_limit - 5) * 60 and remind_times == 0:
                     plyer.notification.notify(
                         title="Curfew 提醒",
                         message=f"距离连续使用时间限制结束还有不到 5 分钟，请保存工作并准备关机。",
                         timeout=10
                     )
+                    remind_times = 1
                     print(f"距离连续使用时间限制结束还有不到 5 分钟")
             
             print(f"当前时间不在禁用时段内（{date_type_names[current_date_type]}），1秒后再次检测")
