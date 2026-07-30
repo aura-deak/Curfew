@@ -1,0 +1,46 @@
+name: Update AUR package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. 2.7)
+        required: true
+
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Update PKGBUILD and .SRCINFO
+        run: |
+          bash scripts/update-aur.sh aur/curfew "$VERSION"
+
+      - name: Push to AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+          git clone ssh://aur@aur.archlinux.org/curfew.git /tmp/aur-repo
+          cp aur/curfew/PKGBUILD aur/curfew/.SRCINFO /tmp/aur-repo/
+          cd /tmp/aur-repo
+          git config user.name "chen-shuhan"
+          git config user.email "2502820816@qq.com"
+          git add -A
+          git commit -m "Update to v${VERSION}"
+          git push

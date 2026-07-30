@@ -1,0 +1,70 @@
+name: Update AUR package (python-chinese-calendar)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. 1.11.0)
+        required: true
+      sha256sum:
+        description: SHA256 checksum of the PyPI tarball
+        required: true
+
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update PKGBUILD
+        run: |
+          PKG_DIR="aur/python-chinese-calendar"
+          VERSION="${{ inputs.version }}"
+          SHA256="${{ inputs.sha256sum }}"
+
+          cd "$PKG_DIR"
+          . PKGBUILD
+
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s|^source=.*|source=(\"https://files.pythonhosted.org/packages/source/c/chinese-calendar/chinese_calendar-${VERSION}.tar.gz\")|" PKGBUILD
+          sed -i "s|^sha256sums=.*|sha256sums=('${SHA256}')|" PKGBUILD
+
+          . PKGBUILD
+          makepkg --printsrcinfo > .SRCINFO 2>/dev/null || {
+            echo "makepkg not available, generating .SRCINFO manually..."
+            cat > .SRCINFO << SRCINFO
+pkgbase = ${pkgname}
+	pkgdesc = ${pkgdesc}
+	pkgver = ${pkgver}
+	pkgrel = ${pkgrel}
+	url = ${url}
+	arch = ${arch}
+	license = ${license}
+	makedepends = python-build
+	makedepends = python-installer
+	depends = python
+	source = https://files.pythonhosted.org/packages/source/c/chinese-calendar/chinese_calendar-${VERSION}.tar.gz
+	sha256sums = ${SHA256}
+
+pkgname = ${pkgname}
+SRCINFO
+          }
+
+      - name: Push to AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+
+          git clone ssh://aur@aur.archlinux.org/python-chinese-calendar.git /tmp/aur-repo
+          cp aur/python-chinese-calendar/PKGBUILD aur/python-chinese-calendar/.SRCINFO /tmp/aur-repo/
+          cd /tmp/aur-repo
+          git config user.name "chen-shuhan"
+          git config user.email "2502820816@qq.com"
+          git add -A
+          git commit -m "Update to v${VERSION}"
+          git push
