@@ -17,8 +17,10 @@ Curfew 是一个智能的开机启动工具，帮助您管理电脑的使用时�
 - 限制自己使用电脑的时间，培养良好的时间管理习惯，避免沉迷于电脑
 
 ## 🚀 快速开始
+> \[!NOTE]
+> 如果你是arch（系）的用户，以yay为例，可以使用`yay -S curfew`并跳过1、2步  
+> 如果你之前通过uv安装curfew，请务必删除干净，再通过yay安装curfew！
 
-**如果你是arch（系）的用户，可以使用`yay -S curfew`并跳过1、2步**
 
 ### 1. 安装 uv
 
@@ -67,6 +69,11 @@ curfew web
 ```
 
 访问 `http://localhost:8080` 进行可视化配置管理。
+
+## 5. 卸载curfew
+- 先运行`curfew uninstall`删除残留文件  
+- 若之前使用yay安装方式，则`yay -R curfew`  
+- 若之前使用uv安装方式，则`uv tool uninstall curfew`
 
 ## ⚙️ 运行方式
 
