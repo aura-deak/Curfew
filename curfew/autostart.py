@@ -9,6 +9,10 @@ systemd_service_file = get_systemd_service_file()
 
 def create_systemd_service():
     try:
+
+        install_path = subprocess.run(['which', 'curfew'], capture_output=True, text=True)
+        install_path = install_path.stdout.strip() # 获取curfew 安装路径，区分AUR安装和uv安装
+
         os.makedirs(systemd_service_dir, exist_ok=True)
         
         service_content = f'''[Unit]
@@ -17,7 +21,7 @@ After=graphical.target
 
 [Service]
 Type=simple
-ExecStart={os.path.expanduser('~/.local/bin/curfew')}
+ExecStart={install_path}
 Restart=on-failure
 StandardOutput=journal
 StandardError=journal
