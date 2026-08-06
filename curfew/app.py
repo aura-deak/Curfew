@@ -5,57 +5,85 @@ from datetime import datetime
 
 from flask import Flask, render_template, jsonify, request
 
-from curfew.config import load_config, save_config
+from curfew.config import load_config, save_config, validate_config_data, AppConfig
 
 app = Flask(__name__, 
             template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
             static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
+
 @app.route('/')
 def dashboard():
+    """仪表板页面"""
     return render_template('dashboard.html')
+
 
 @app.route('/schedule')
 def schedule_page():
+    """时间表页面"""
     return render_template('schedule.html')
+
 
 @app.route('/api/config', methods=['GET'])
 def api_get_config():
-    config = load_config()
-    if config is None:
-        return jsonify({'error': '配置文件不存在'}), 404
-    return jsonify(config)
+    """获取配置的 API 端点"""
+    try:
+        config = load_config()
+        # 使用 model_dump() 将 Pydantic 模型转换为字典
+        return jsonify(config.model_dump())
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': f"获取配置失败: {str(e)}"}), 500
+
 
 @app.route('/api/config', methods=['POST'])
 def api_save_config():
+    """保存配置的 API 端点
+    
+    所有验证都在 config.py 中完成，此处只负责处理 HTTP 响应
+    """
     try:
-        config = request.json
+        raw_data = request.json
+        # config.py 中的 validate_config_data() 处理所有验证
+        config = validate_config_data(raw_data)
         save_config(config)
         return jsonify({'success': True})
+    except ValueError as e:
+        # config.py 已经处理了所有验证错误，这里直接返回
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # 只处理非预期的异常
+        return jsonify({'error': f"保存配置失败: {str(e)}"}), 500
+
 
 @app.route('/api/status', methods=['GET'])
 def api_get_status():
-    from curfew.date_type import get_date_type
-    from curfew.curfew_main import is_in_restricted_hours_for_today
-    from curfew.timer import get_active_time
+    """获取当前状态的 API 端点"""
+    try:
+        from curfew.date_type import get_date_type
+        from curfew.curfew_main import is_in_restricted_hours_for_today
+        from curfew.timer import get_active_time
 
-    config = load_config()
-    if config is None:
-        return jsonify({'error': '配置文件不存在'}), 404
+        config = load_config()
+        
+        date_type = get_date_type()
+        # 使用 config.restricted_hours 访问 RestrictedHours 对象
+        is_in_curfew = is_in_restricted_hours_for_today(config.restricted_hours)
+        now = datetime.now().strftime('%H:%M:%S')
+        consecutive_seconds = get_active_time()
 
-    date_type = get_date_type()
-    is_in_curfew = is_in_restricted_hours_for_today(config.get('restricted_hours', {}))
-    now = datetime.now().strftime('%H:%M:%S')
-    consecutive_seconds = get_active_time()
+        return jsonify({
+            'date_type': date_type,
+            'is_in_curfew': is_in_curfew,
+            'current_time': now,
+            'consecutive_seconds': consecutive_seconds
+        })
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': f"获取状态失败: {str(e)}"}), 500
 
-    return jsonify({
-        'date_type': date_type,
-        'is_in_curfew': is_in_curfew,
-        'current_time': now,
-        'consecutive_seconds': consecutive_seconds
-    })
 
 if __name__ == '__main__':
     webbrowser.open('http://localhost:8080')
