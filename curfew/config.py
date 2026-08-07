@@ -125,39 +125,8 @@ def load_config() -> AppConfig:
         return config
     except json.JSONDecodeError as e:
         raise ValueError(f"配置文件格式错误（JSON 解析失败）: {e}")
-    except (TypeError, ValueError) as e:
-        raise ValueError(f"配置文件内容与模型不匹配: {e}")
-
-
-def validate_config_data(raw_data: dict) -> AppConfig:
-    """验证并解析原始配置数据
-    
-    此函数集中了所有配置验证逻辑，避免在其他模块中重复检查。
-    
-    Args:
-        raw_data: 原始配置数据字典（通常来自 JSON）
-        
-    Returns:
-        AppConfig: 验证通过的配置对象
-        
-    Raises:
-        ValueError: 数据格式或内容错误时抛出，包含详细错误信息
-    """
-    if not isinstance(raw_data, dict):
-        raise ValueError("配置数据必须是字典格式")
-    
-    if raw_data is None:
-        raise ValueError("配置数据不能为空")
-    
-    try:
-        # Pydantic 会自动进行所有验证
-        config = AppConfig(**raw_data)
-        return config
-    except ValueError as e:
-        # 捕获 Pydantic 的验证错误并重新抛出
-        raise ValueError(f"配置数据验证失败: {str(e)}")
     except TypeError as e:
-        raise ValueError(f"配置数据类型不匹配: {str(e)}")
+        raise ValueError(f"配置文件内容与模型不匹配: {e}")
 
 
 # ========== 核心函数：保存配置 ==========

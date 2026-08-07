@@ -11,7 +11,6 @@ import pytest
 from curfew.config import (
     load_config,
     save_config,
-    validate_config_data,
     get_config_file,
     create_default_config,
     AppConfig,
@@ -74,8 +73,12 @@ def test_save_config(tmp_path):
     config_file = tmp_path / 'config.json'
     
     with patch.dict(os.environ, {'CURFEW_CONFIG': str(config_file)}):
-        config = create_default_config()
-        save_config(config)
+        if 'curfew.config' in sys.modules:
+            del sys.modules['curfew.config']
+        from curfew.config import save_config as reload_save_config, create_default_config as reload_create_default_config
+        
+        config = reload_create_default_config()
+        reload_save_config(config)
         
         # 验证文件已创建
         assert config_file.exists()
@@ -95,8 +98,12 @@ def test_save_config_with_directory(tmp_path):
     config_file = config_dir / 'config.json'
     
     with patch.dict(os.environ, {'CURFEW_CONFIG': str(config_file)}):
-        config = create_default_config()
-        save_config(config)
+        if 'curfew.config' in sys.modules:
+            del sys.modules['curfew.config']
+        from curfew.config import save_config as reload_save_config, create_default_config as reload_create_default_config
+        
+        config = reload_create_default_config()
+        reload_save_config(config)
         
         # 验证目录已创建
         assert config_dir.exists()
@@ -156,11 +163,15 @@ def test_config_serialization(tmp_path):
     )
     
     with patch.dict(os.environ, {'CURFEW_CONFIG': str(config_file)}):
+        if 'curfew.config' in sys.modules:
+            del sys.modules['curfew.config']
+        from curfew.config import save_config as reload_save_config, load_config as reload_load_config
+        
         # 保存配置
-        save_config(config)
+        reload_save_config(config)
         
         # 加载配置
-        loaded_config = load_config()
+        loaded_config = reload_load_config()
         
         # 验证加载的配置与原始配置相同
         assert loaded_config.autostart_type == 'systemd'
@@ -170,72 +181,3 @@ def test_config_serialization(tmp_path):
         assert loaded_config.continuous_usage_limits.weekend == 120
         assert len(loaded_config.restricted_hours.workday) == 1
         assert loaded_config.restricted_hours.workday[0].start_hour == 23
-
-
-def test_validate_config_data_valid():
-    """测试验证有效的配置数据"""
-    valid_data = {
-        'autostart_type': 'systemd',
-        'shutdown_command': ['shutdown', 'now'],
-        'debug': True,
-        'restricted_hours': {
-            'workday': [{'start_hour': 23, 'start_minute': 0, 'end_hour': 6, 'end_minute': 0}],
-            'weekend': [],
-            'holiday': []
-        },
-        'continuous_usage_limits': {
-            'workday': 60,
-            'weekend': 120,
-            'holiday': 0
-        }
-    }
-    
-    config = validate_config_data(valid_data)
-    assert config.autostart_type == 'systemd'
-    assert config.debug is True
-
-
-def test_validate_config_data_invalid_type():
-    """测试验证无效类型的配置数据"""
-    invalid_data = {
-        'autostart_type': 'systemd',
-        'shutdown_command': ['shutdown', 'now'],
-        'debug': 'not_a_bool',  # ❌ 应该是 bool
-        'restricted_hours': {'workday': [], 'weekend': [], 'holiday': []},
-        'continuous_usage_limits': {'workday': 0, 'weekend': 0, 'holiday': 0}
-    }
-    
-    with pytest.raises(ValueError):
-        validate_config_data(invalid_data)
-
-
-def test_validate_config_data_invalid_time():
-    """测试验证无效时间范围的配置数据"""
-    invalid_data = {
-        'autostart_type': 'systemd',
-        'shutdown_command': ['shutdown', 'now'],
-        'debug': False,
-        'restricted_hours': {
-            'workday': [{'start_hour': 25, 'start_minute': 0, 'end_hour': 6, 'end_minute': 0}],  # ❌ 小时超出范围
-            'weekend': [],
-            'holiday': []
-        },
-        'continuous_usage_limits': {'workday': 0, 'weekend': 0, 'holiday': 0}
-    }
-    
-    with pytest.raises(ValueError):
-        validate_config_data(invalid_data)
-
-
-def test_validate_config_data_empty_shutdown_command():
-    """测试验证空关机命令"""
-    invalid_data = {
-        'autostart_type': 'systemd',
-        'shutdown_command': [],  # ❌ 不能为空
-        'debug': False,
-        'restricted_hours': {'workday': [], 'weekend': [], 'holiday': []},
-        'continuous_usage_limits': {'workday': 0, 'weekend': 0, 'holiday': 0}
-    }
-    
-    with pytest.raises(ValueError):
-        validate_config_data(invalid_data)

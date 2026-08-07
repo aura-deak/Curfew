@@ -5,7 +5,7 @@ from datetime import datetime
 
 from flask import Flask, render_template, jsonify, request
 
-from curfew.config import load_config, save_config, validate_config_data, AppConfig
+from curfew.config import load_config, save_config, AppConfig
 
 app = Flask(__name__, 
             template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
@@ -39,21 +39,16 @@ def api_get_config():
 
 @app.route('/api/config', methods=['POST'])
 def api_save_config():
-    """保存配置的 API 端点
-    
-    所有验证都在 config.py 中完成，此处只负责处理 HTTP 响应
-    """
+    """保存配置的 API 端点"""
     try:
         raw_data = request.json
-        # config.py 中的 validate_config_data() 处理所有验证
-        config = validate_config_data(raw_data)
+        # Pydantic 会自动验证和解析数据
+        config = AppConfig(**raw_data)
         save_config(config)
         return jsonify({'success': True})
     except ValueError as e:
-        # config.py 已经处理了所有验证错误，这里直接返回
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': f"配置格式错误: {str(e)}"}), 400
     except Exception as e:
-        # 只处理非预期的异常
         return jsonify({'error': f"保存配置失败: {str(e)}"}), 500
 
 
