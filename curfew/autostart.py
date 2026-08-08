@@ -22,7 +22,9 @@ After=graphical.target
 [Service]
 Type=simple
 ExecStart={install_path}
-Restart=on-failure
+Restart=always
+RestartSec=5
+StartLimitInterval=0
 StandardOutput=journal
 StandardError=journal
 
