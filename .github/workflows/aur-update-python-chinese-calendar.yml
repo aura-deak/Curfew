@@ -44,7 +44,6 @@ jobs:
           	license = ${license}
           	makedepends = python-build
           	makedepends = python-installer
-          	makedepends = python-setuptools
           	depends = python
           	source = https://files.pythonhosted.org/packages/source/c/chinese-calendar/chinese_calendar-${VERSION}.tar.gz
           	sha256sums = ${SHA256}
