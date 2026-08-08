@@ -21,6 +21,14 @@ Curfew 是一个智能的开机启动工具，帮助您管理电脑的使用时�
 > 如果你是arch（系）的用户，以yay为例，可以使用`yay -S curfew`并跳过1、2步  
 > 如果你之前通过uv安装curfew，请务必删除干净，再通过yay安装curfew！
 
+> \[!NOTE]
+> 欸不是AUR你怎么似了啊😨  
+> 本项目使用GitHub Actions自动维护AUR包，一般而言，AUR上是最新版本的软件。除非AUR或者Actions爆了。  
+> 如果你使用AUR版本，且AUR版本不是最新，且迫切希望使用最新版本：
+> 1. 请卸载AUR版本（不要执行`curfew uninstall`以保留数据）
+> 2. 然后安装uv版本或手动构建安装
+> 3. 执行`which curfew`，然后找到`~/.config/systemd/user/curfew.service`，修改`ExecStart=`为刚刚获取的可执行程序路径
+
 
 ### 1. 安装 uv
 
