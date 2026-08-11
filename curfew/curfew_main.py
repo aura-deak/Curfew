@@ -5,13 +5,24 @@ import datetime
 import signal
 import sys
 import time
+from datetime import timedelta
 
 import plyer
 
-from curfew.config import load_config, AppConfig
+from curfew.config import load_config, save_config, AppConfig
 from curfew.date_type import get_date_type
 from curfew.shutdown import shutdown
 from curfew.timer import get_active_time
+
+
+def _compute_banned_until(ban_duration_minutes: int) -> str:
+    """计算禁用到期时间的 ISO 格式字符串"""
+    return (datetime.datetime.now() + timedelta(minutes=ban_duration_minutes)).isoformat()
+
+
+def _is_banned_period_active(banned_until_str: str) -> bool:
+    """判断禁用期是否仍在活跃状态"""
+    return datetime.datetime.now() < datetime.datetime.fromisoformat(banned_until_str)
 
 
 def signal_handler(signum: int, frame) -> None:
@@ -188,11 +199,31 @@ def main(config: AppConfig) -> None:
     current_date_type = get_date_type()
     print(f"\n当前日期类型: {date_type_names[current_date_type]}")
 
+    if config.banned_until:
+        if _is_banned_period_active(config.banned_until):
+            print("仍在禁用期内，执行关机...")
+            shutdown(config.shutdown_command, debug=debug)
+            return
+        else:
+            config.banned_until = ""
+            save_config(config)
+
     remind_times = 0
 
     while True:
+        if config.banned_until:
+            if _is_banned_period_active(config.banned_until):
+                break
+            else:
+                config.banned_until = ""
+                save_config(config)
+                continue
+
         if is_in_restricted_hours_for_today(restricted_hours):
             print("检测到当前时间在禁用时段内")
+            if not config.banned_until:
+                config.banned_until = _compute_banned_until(config.ban_duration_minutes)
+                save_config(config)
             break
         elif is_is_within_five_minutes_of_restricted_time_for_today(restricted_hours):
             plyer.notification.notify(
@@ -209,6 +240,9 @@ def main(config: AppConfig) -> None:
                 uptime_seconds = get_active_time()
                 if uptime_seconds >= current_limit * 60:
                     print(f"连续使用时间超过限制（{current_limit}分钟），当前运行时间: {uptime_seconds // 60}分钟")
+                    if not config.banned_until:
+                        config.banned_until = _compute_banned_until(config.ban_duration_minutes)
+                        save_config(config)
                     break
                 elif uptime_seconds >= (current_limit - 5) * 60 and remind_times == 0:
                     plyer.notification.notify(
@@ -221,6 +255,9 @@ def main(config: AppConfig) -> None:
             
             print(f"当前时间不在禁用时段内（{date_type_names[current_date_type]}），1秒后再次检测")
             time.sleep(check_interval)
+    
+    if config.banned_until and _is_banned_period_active(config.banned_until):
+        print("仍在禁用期内，执行关机...")
     
     print("准备执行关机命令")
     shutdown(config.shutdown_command, debug=debug)

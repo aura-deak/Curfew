@@ -124,6 +124,33 @@ async function updateStatus() {
             consecutiveLimitEl.textContent = limit > 0 ? `${limit} 分钟` : '无限制';
         }
 
+        const banStatusEl = document.getElementById('ban-status');
+        if (banStatusEl) {
+            if (status.is_banned) {
+                banStatusEl.style.display = '';
+                const banRemainingEl = document.getElementById('ban-remaining');
+                const banUntilEl = document.getElementById('ban-until');
+                if (banRemainingEl) {
+                    banRemainingEl.textContent = formatSecondsToHMS(status.ban_remaining_seconds || 0);
+                }
+                if (banUntilEl) {
+                    const bannedUntilStr = status.banned_until || '--';
+                    if (bannedUntilStr && bannedUntilStr !== '--') {
+                        const bannedDate = new Date(bannedUntilStr);
+                        if (!isNaN(bannedDate.getTime())) {
+                            banUntilEl.textContent = bannedDate.toLocaleString('zh-CN');
+                        } else {
+                            banUntilEl.textContent = bannedUntilStr;
+                        }
+                    } else {
+                        banUntilEl.textContent = '--';
+                    }
+                }
+            } else {
+                banStatusEl.style.display = 'none';
+            }
+        }
+
         await loadScheduleForToday();
     } catch (error) {
         console.error('Failed to update status:', error);
@@ -157,7 +184,12 @@ function stopStatusUpdates() {
 
 async function loadConfig() {
     try {
-        return await apiGet('/api/config');
+        const config = await apiGet('/api/config');
+        const banDurationEl = document.getElementById('ban-duration-minutes');
+        if (banDurationEl && config.ban_duration_minutes !== undefined) {
+            banDurationEl.value = config.ban_duration_minutes;
+        }
+        return config;
     } catch (error) {
         showNotification('加载配置失败，请先运行main.py初始化系统', 'error');
         return null;
@@ -166,6 +198,10 @@ async function loadConfig() {
 
 async function saveConfig(config) {
     try {
+        const banDurationEl = document.getElementById('ban-duration-minutes');
+        if (banDurationEl) {
+            config.ban_duration_minutes = parseInt(banDurationEl.value) || 5;
+        }
         await apiPost('/api/config', config);
         showNotification('配置已保存', 'success');
         return true;

@@ -57,6 +57,8 @@ class AppConfig(BaseModel):
         default_factory=ContinuousUsageLimits,
         description="连续使用限制"
     )
+    ban_duration_minutes: int = Field(default=5, description="触发限制后的禁止使用时间（分钟）")
+    banned_until: str = Field(default="", description="禁用直到该时间过去（ISO 格式）")
     debug: bool = Field(default=False, description="调试模式")
 
     @field_validator("shutdown_command")
@@ -171,13 +173,17 @@ def get_cached_config() -> AppConfig | None:
 # ========== 便捷函数：创建默认配置 ==========
 def create_default_config(
     autostart_type: str = "manual",
-    shutdown_command: List[str] | None = None
+    shutdown_command: List[str] | None = None,
+    ban_duration_minutes: int = 5,
+    banned_until: str = ""
 ) -> AppConfig:
     """创建一个默认配置对象（不自动保存）
     
     Args:
         autostart_type: 自启动类型，默认为 "manual"
         shutdown_command: 关机命令，默认为 ["systemctl", "suspend"]
+        ban_duration_minutes: 触发限制后的禁止使用时间（分钟），默认 5
+        banned_until: 禁用直到该时间过去（ISO 格式），默认空字符串
         
     Returns:
         AppConfig: 默认配置对象
@@ -187,5 +193,7 @@ def create_default_config(
         shutdown_command=shutdown_command or ["systemctl", "suspend"],
         restricted_hours=RestrictedHours(),
         continuous_usage_limits=ContinuousUsageLimits(),
+        ban_duration_minutes=ban_duration_minutes,
+        banned_until=banned_until,
         debug=False
     )

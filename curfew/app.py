@@ -68,11 +68,23 @@ def api_get_status():
         now = datetime.now().strftime('%H:%M:%S')
         consecutive_seconds = get_active_time()
 
+        banned_until = config.banned_until
+        is_banned = False
+        ban_remaining_seconds = 0
+        if banned_until:
+            banned_dt = datetime.fromisoformat(banned_until)
+            if datetime.now() < banned_dt:
+                is_banned = True
+                ban_remaining_seconds = int((banned_dt - datetime.now()).total_seconds())
+
         return jsonify({
             'date_type': date_type,
             'is_in_curfew': is_in_curfew,
             'current_time': now,
-            'consecutive_seconds': consecutive_seconds
+            'consecutive_seconds': consecutive_seconds,
+            'banned_until': banned_until,
+            'is_banned': is_banned,
+            'ban_remaining_seconds': ban_remaining_seconds
         })
     except FileNotFoundError as e:
         return jsonify({'error': str(e)}), 404

@@ -18,6 +18,15 @@
     </header>
 
     <div class="container">
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h2>⚙️ 全局设置</h2>
+            <div class="form-group">
+                <label for="ban-duration-minutes">触发限制后的禁止使用时间（分钟）</label>
+                <input type="number" id="ban-duration-minutes" min="1" max="1440" value="5" style="width: 120px;">
+                <small style="color: var(--text-secondary);">当连续使用触发限制后，在此时间内禁止使用</small>
+            </div>
+        </div>
+
         <div class="tabs">
             <button class="tab active" onclick="switchTab('workday')">📅 工作日</button>
             <button class="tab" onclick="switchTab('weekend')">🎉 周末</button>
@@ -259,6 +268,7 @@
                         weekend: 0,
                         holiday: 0
                     },
+                    ban_duration_minutes: 5,
                     debug: false
                 };
             }
@@ -269,6 +279,7 @@
                 weekend: parseInt(document.getElementById('continuous-limit-weekend').value) || 0,
                 holiday: parseInt(document.getElementById('continuous-limit-holiday').value) || 0
             };
+            config.ban_duration_minutes = parseInt(document.getElementById('ban-duration-minutes').value) || 5;
             await saveConfig(config);
             showNotification('配置已保存', 'success');
         }
@@ -289,6 +300,7 @@
                 holiday: config.continuous_usage_limits?.holiday || 0
             };
 
+            document.getElementById('ban-duration-minutes').value = config.ban_duration_minutes ?? 5;
             document.getElementById('continuous-limit-workday').value = continuousLimits.workday;
             document.getElementById('continuous-limit-weekend').value = continuousLimits.weekend;
             document.getElementById('continuous-limit-holiday').value = continuousLimits.holiday;
