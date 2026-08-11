@@ -10,6 +10,7 @@ from datetime import timedelta
 import plyer
 
 from curfew.config import load_config, save_config, AppConfig
+from curfew.config import check_config_update, start_config_watcher, stop_config_watcher
 from curfew.date_type import get_date_type
 from curfew.shutdown import shutdown
 from curfew.timer import get_active_time
@@ -28,6 +29,7 @@ def _is_banned_period_active(banned_until_str: str) -> bool:
 def signal_handler(signum: int, frame) -> None:
     """信号处理器"""
     print(f"收到信号 {signum}，准备退出...")
+    stop_config_watcher()
     sys.exit(0)
 
 
@@ -164,7 +166,6 @@ def main(config: AppConfig) -> None:
     Args:
         config: AppConfig 配置对象
     """
-    # 直接从 config 对象访问属性，有完整的类型提示
     restricted_hours = config.restricted_hours
     continuous_usage_limits = config.continuous_usage_limits
     check_interval = 1
@@ -172,6 +173,8 @@ def main(config: AppConfig) -> None:
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+    start_config_watcher(interval=check_interval)
 
     print("Curfew 启动，开始检测禁用时段")
     print("检测间隔: 1 秒")
@@ -203,6 +206,7 @@ def main(config: AppConfig) -> None:
         if _is_banned_period_active(config.banned_until):
             print("仍在禁用期内，执行关机...")
             shutdown(config.shutdown_command, debug=debug)
+            stop_config_watcher()
             return
         else:
             config.banned_until = ""
@@ -211,6 +215,15 @@ def main(config: AppConfig) -> None:
     remind_times = 0
 
     while True:
+        updated_config = check_config_update()
+        if updated_config is not None:
+            config = updated_config
+            restricted_hours = config.restricted_hours
+            continuous_usage_limits = config.continuous_usage_limits
+            debug = config.debug
+            remind_times = 0
+            print("[配置热更新] 检测到配置文件变更，已重新加载")
+
         if config.banned_until:
             if _is_banned_period_active(config.banned_until):
                 break
@@ -262,6 +275,7 @@ def main(config: AppConfig) -> None:
     print("准备执行关机命令")
     shutdown(config.shutdown_command, debug=debug)
     
+    stop_config_watcher()
     print("Curfew 退出")
 
 

@@ -22,7 +22,7 @@ def test_create_systemd_service_success():
         
         result = create_systemd_service()
         assert result is True
-        assert mock_run.call_count == 3
+        assert mock_run.call_count == 4
 
 def test_create_systemd_service_daemon_reload_fail():
     def side_effect(args, **kwargs):
