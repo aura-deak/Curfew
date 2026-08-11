@@ -124,6 +124,35 @@ async function updateStatus() {
             consecutiveLimitEl.textContent = limit > 0 ? `${limit} 分钟` : '无限制';
         }
 
+        const totalUsageTimeEl = document.getElementById('total-usage-time');
+        const totalUsageLimitEl = document.getElementById('total-usage-limit-display');
+        const totalUsageRemainingEl = document.getElementById('total-usage-remaining');
+
+        if (totalUsageTimeEl) {
+            totalUsageTimeEl.textContent = formatSecondsToHMS(status.total_usage_seconds || 0);
+        }
+
+        if (totalUsageLimitEl) {
+            const totalLimit = status.total_usage_limit || 0;
+            totalUsageLimitEl.textContent = totalLimit > 0 ? `${totalLimit} 分钟` : '无限制';
+        }
+
+        if (totalUsageRemainingEl) {
+            const remaining = status.total_usage_remaining_seconds || 0;
+            const totalLimit = status.total_usage_limit || 0;
+            if (totalLimit > 0) {
+                if (remaining > 0) {
+                    totalUsageRemainingEl.textContent = `剩余 ${formatSecondsToHMS(remaining)}`;
+                    totalUsageRemainingEl.style.color = 'var(--accent-green)';
+                } else {
+                    totalUsageRemainingEl.textContent = '已达限制';
+                    totalUsageRemainingEl.style.color = 'var(--accent-red)';
+                }
+            } else {
+                totalUsageRemainingEl.textContent = '';
+            }
+        }
+
         const banStatusEl = document.getElementById('ban-status');
         if (banStatusEl) {
             if (status.is_banned) {

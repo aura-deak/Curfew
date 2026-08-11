@@ -40,6 +40,14 @@ class ContinuousUsageLimits(BaseModel):
     holiday: int = Field(default=0, ge=0, description="节假日连续使用限制（分钟）")
 
 
+# ========== 总使用限制配置 ==========
+class TotalUsageLimits(BaseModel):
+    """每日总使用时间限制 - 分工作日、周末、节假日"""
+    workday: int = Field(default=0, ge=0, description="工作日总使用限制（分钟）")
+    weekend: int = Field(default=0, ge=0, description="周末总使用限制（分钟）")
+    holiday: int = Field(default=0, ge=0, description="节假日总使用限制（分钟）")
+
+
 # ========== 主配置模型 ==========
 class AppConfig(BaseModel):
     """应用主配置模型"""
@@ -59,6 +67,12 @@ class AppConfig(BaseModel):
         default_factory=ContinuousUsageLimits,
         description="连续使用限制"
     )
+    total_usage_limits: TotalUsageLimits = Field(
+        default_factory=TotalUsageLimits,
+        description="每日总使用时间限制"
+    )
+    total_usage_seconds: int = Field(default=0, ge=0, description="当日累计使用秒数")
+    total_usage_date: str = Field(default="", description="当前累计对应的日期（YYYY-MM-DD）")
     ban_duration_minutes: int = Field(default=5, description="触发限制后的禁止使用时间（分钟）")
     banned_until: str = Field(default="", description="禁用直到该时间过去（ISO 格式）")
     debug: bool = Field(default=False, description="调试模式")
@@ -309,6 +323,7 @@ def create_default_config(
         shutdown_command=shutdown_command or ["systemctl", "suspend"],
         restricted_hours=RestrictedHours(),
         continuous_usage_limits=ContinuousUsageLimits(),
+        total_usage_limits=TotalUsageLimits(),
         ban_duration_minutes=ban_duration_minutes,
         banned_until=banned_until,
         debug=False

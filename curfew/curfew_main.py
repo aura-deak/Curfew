@@ -168,6 +168,7 @@ def main(config: AppConfig) -> None:
     """
     restricted_hours = config.restricted_hours
     continuous_usage_limits = config.continuous_usage_limits
+    total_usage_limits = config.total_usage_limits
     check_interval = 1
     debug = config.debug
 
@@ -213,6 +214,7 @@ def main(config: AppConfig) -> None:
             save_config(config)
 
     remind_times = 0
+    total_remind_times = 0
 
     while True:
         updated_config = check_config_update()
@@ -220,8 +222,10 @@ def main(config: AppConfig) -> None:
             config = updated_config
             restricted_hours = config.restricted_hours
             continuous_usage_limits = config.continuous_usage_limits
+            total_usage_limits = config.total_usage_limits
             debug = config.debug
             remind_times = 0
+            total_remind_times = 0
             print("[配置热更新] 检测到配置文件变更，已重新加载")
 
         if config.banned_until:
@@ -266,7 +270,37 @@ def main(config: AppConfig) -> None:
                     remind_times = 1
                     print(f"距离连续使用时间限制结束还有不到 5 分钟")
             
-            print(f"当前时间不在禁用时段内（{date_type_names[current_date_type]}），1秒后再次检测")
+            total_limit = getattr(total_usage_limits, current_date_type)
+            
+            if total_limit > 0:
+                today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+                
+                if config.total_usage_date != today_str:
+                    config.total_usage_date = today_str
+                    config.total_usage_seconds = 0
+                
+                config.total_usage_seconds += check_interval
+                save_config(config)
+                
+                total_limit_seconds = total_limit * 60
+                if config.total_usage_seconds >= total_limit_seconds:
+                    print(f"总使用时间超过限制（{total_limit}分钟），当前累计: {config.total_usage_seconds // 60}分钟")
+                    if not config.banned_until:
+                        config.banned_until = _compute_banned_until(config.ban_duration_minutes)
+                        save_config(config)
+                    break
+                elif config.total_usage_seconds >= (total_limit - 5) * 60 and total_remind_times == 0:
+                    plyer.notification.notify(
+                        title="Curfew 提醒",
+                        message=f"距离每日总使用时间限制结束还有不到 5 分钟，请保存工作并准备关机。",
+                        timeout=10
+                    )
+                    total_remind_times = 1
+                    print(f"距离每日总使用时间限制结束还有不到 5 分钟")
+            
+            total_limit_val = getattr(total_usage_limits, current_date_type)
+            total_info = f", 今日累计: {config.total_usage_seconds // 60}分钟" if total_limit_val > 0 else ""
+            print(f"当前时间不在禁用时段内（{date_type_names[current_date_type]}），1秒后再次检测{total_info}")
             time.sleep(check_interval)
     
     if config.banned_until and _is_banned_period_active(config.banned_until):
