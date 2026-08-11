@@ -77,7 +77,7 @@ def api_get_status():
                 is_banned = True
                 ban_remaining_seconds = int((banned_dt - datetime.now()).total_seconds())
 
-        return jsonify({
+        data = jsonify({
             'date_type': date_type,
             'is_in_curfew': is_in_curfew,
             'current_time': now,
@@ -86,9 +86,10 @@ def api_get_status():
             'is_banned': is_banned,
             'ban_remaining_seconds': ban_remaining_seconds,
             'total_usage_seconds': config.total_usage_seconds,
-            'total_usage_limit': getattr(config.total_usage_limits, date_type, 0),
+            'total_usage_limit': getattr(config.total_usage_limits, date_type),
             'total_usage_remaining_seconds': max(0, getattr(config.total_usage_limits, date_type, 0) * 60 - config.total_usage_seconds)
         })
+        return data
     except FileNotFoundError as e:
         return jsonify({'error': str(e)}), 404
     except Exception as e:

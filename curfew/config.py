@@ -86,12 +86,8 @@ class AppConfig(BaseModel):
         return v
 
 
-# ========== 全局单例（缓存当前配置实例）==========
-_current_config: AppConfig | None = None
-_last_mtime: float = 0.0
+# ========== 全局单例（不使用缓存）==========
 _config_lock = threading.Lock()
-_change_listeners: List[Callable[[AppConfig], None]] = []
-_watcher_stop_event: threading.Event | None = None
 
 
 # ========== 核心函数：文件路径 ==========
@@ -121,7 +117,7 @@ def get_systemd_service_file() -> str:
 
 # ========== 核心函数：加载配置 ==========
 def load_config() -> AppConfig:
-    """从文件加载配置并缓存
+    """从文件加载配置（每次读取新数据，无缓存）
     
     Returns:
         AppConfig: 解析后的配置对象
@@ -130,8 +126,6 @@ def load_config() -> AppConfig:
         FileNotFoundError: 配置文件不存在时抛出
         ValueError: 配置格式错误时抛出
     """
-    global _current_config, _last_mtime
-    
     config_file = get_config_file()
     
     if not os.path.exists(config_file):
@@ -143,8 +137,6 @@ def load_config() -> AppConfig:
                 raw_data = json.load(f)
             
             config = AppConfig(**raw_data)
-            _current_config = config
-            _last_mtime = os.path.getmtime(config_file)
             return config
     except json.JSONDecodeError as e:
         raise ValueError(f"配置文件格式错误（JSON 解析失败）: {e}")
@@ -162,8 +154,6 @@ def save_config(config: AppConfig) -> None:
     Raises:
         IOError: 文件写入失败时抛出
     """
-    global _current_config, _last_mtime
-    
     config_file = get_config_file()
     dir_path = os.path.dirname(config_file)
     
@@ -175,129 +165,10 @@ def save_config(config: AppConfig) -> None:
             json_str = config.model_dump_json(indent=2, exclude_none=False)
             with open(config_file, 'w', encoding='utf-8') as f:
                 f.write(json_str)
-            _current_config = config
-            _last_mtime = os.path.getmtime(config_file)
     except IOError as e:
         raise IOError(f"无法保存配置文件: {e}")
 
 
-# ========== 便捷函数：获取缓存的配置 ==========
-def get_cached_config() -> AppConfig | None:
-    """获取缓存的配置对象（可能为 None）
-    
-    Returns:
-        缓存的 AppConfig 对象或 None
-    """
-    return _current_config
-
-
-# ========== 热更新：文件变更检测与监听 ==========
-def add_config_change_listener(listener: Callable[[AppConfig], None]) -> None:
-    """注册配置变更监听器
-    
-    Args:
-        listener: 当配置发生变化时被调用的回调函数，接收新的 AppConfig
-    """
-    _change_listeners.append(listener)
-
-
-def remove_config_change_listener(listener: Callable[[AppConfig], None]) -> None:
-    """移除配置变更监听器
-    
-    Args:
-        listener: 要移除的回调函数
-    """
-    if listener in _change_listeners:
-        _change_listeners.remove(listener)
-
-
-def _notify_listeners(new_config: AppConfig) -> None:
-    """通知所有配置变更监听器
-    
-    Args:
-        new_config: 新的配置对象
-    """
-    for listener in _change_listeners:
-        try:
-            listener(new_config)
-        except Exception:
-            pass
-
-
-def check_config_update() -> AppConfig | None:
-    """检查配置文件是否已更新，若已更新则重新加载并通知监听器
-    
-    Returns:
-        如果配置发生变更返回新的 AppConfig，否则返回 None
-    """
-    global _current_config, _last_mtime
-    
-    config_file = get_config_file()
-    
-    if not os.path.exists(config_file):
-        return None
-    
-    try:
-        current_mtime = os.path.getmtime(config_file)
-    except OSError:
-        return None
-    
-    if current_mtime == _last_mtime:
-        return None
-    
-    try:
-        with _config_lock:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                raw_data = json.load(f)
-            
-            config = AppConfig(**raw_data)
-            _current_config = config
-            _last_mtime = current_mtime
-        
-        _notify_listeners(config)
-        return config
-    except (json.JSONDecodeError, TypeError, ValueError):
-        return None
-
-
-def start_config_watcher(interval: float = 1.0) -> threading.Thread:
-    """启动后台配置文件监控线程
-    
-    定期检查配置文件是否变更，若变更则自动重新加载并通知监听器。
-    
-    Args:
-        interval: 检查间隔（秒），默认 1.0
-        
-    Returns:
-        监控线程（已启动为守护线程），可通过 stop_config_watcher() 停止
-    """
-    global _watcher_stop_event
-    
-    stop_event = threading.Event()
-    _watcher_stop_event = stop_event
-    
-    def _watcher_loop() -> None:
-        while not stop_event.is_set():
-            try:
-                check_config_update()
-            except Exception:
-                pass
-            stop_event.wait(interval)
-    
-    thread = threading.Thread(target=_watcher_loop, daemon=True)
-    thread.start()
-    return thread
-
-
-def stop_config_watcher() -> None:
-    """停止后台配置文件监控线程
-    
-    通过设置全局停止事件来终止所有由 start_config_watcher() 启动的监控线程。
-    """
-    global _watcher_stop_event
-    if _watcher_stop_event is not None:
-        _watcher_stop_event.set()
-        _watcher_stop_event = None
 
 
 # ========== 便捷函数：创建默认配置 ==========
