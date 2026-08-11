@@ -5,6 +5,7 @@
 # Curfew - 让时间管理更智能，让生活更有规律。
 
 <img width="1856" height="1022" alt="图片" src="https://github.com/user-attachments/assets/dd0d8574-1972-4fea-bd4b-8eb2f02752da" />
+<img width="1856" height="1548" alt="图片" src="https://github.com/user-attachments/assets/2309a905-9d17-48e6-a44d-1b86b0d3e714" />
 
 
 Curfew 是一个智能的开机启动工具，帮助您管理电脑的使用时间，在设定的禁用时段自动执行关机操作。
