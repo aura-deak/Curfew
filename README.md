@@ -1,7 +1,3 @@
-![Stone Badge](https://stone.professorlee.work/api/stone/alu-deak/Curfew)
-
-网络上说说就得了，现实中谁不想急头白脸的在readme里养一只石墩子做宠物（
-
 # Curfew - 让时间管理更智能，让生活更有规律。
 
 <img width="1856" height="1022" alt="图片" src="https://github.com/user-attachments/assets/dd0d8574-1972-4fea-bd4b-8eb2f02752da" />
