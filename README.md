@@ -69,7 +69,7 @@ curfew init
 
 > [!NOTE]  
 > 推荐项目[aura-deak/white-list-killer](https://github.com/aura-deak/white-list-killer)  
-> 把关机命令配置成`python killer.py loop`（绝对路径），可实现定时白名单效果！  
+> 把关机命令配置成`white-list-killer clean --loop`，可实现定时白名单效果！  
 > 注：`python killer.py loop`还没有优雅的退出方式，目前的退出方式是重启  
 
 ### 4. 启动 Web 界面
