@@ -73,6 +73,9 @@ class AppConfig(BaseModel):
     )
     total_usage_seconds: int = Field(default=0, ge=0, description="当日累计使用秒数")
     total_usage_date: str = Field(default="", description="当前累计对应的日期（YYYY-MM-DD）")
+    total_usage_saved_at: float = Field(
+        default=0.0, ge=0, description="上次落盘累计使用时间时的墙钟时间（Unix 秒）"
+    )
     ban_duration_minutes: int = Field(default=5, description="触发限制后的禁止使用时间（分钟）")
     banned_until: str = Field(default="", description="禁用直到该时间过去（ISO 格式）")
     debug: bool = Field(default=False, description="调试模式")

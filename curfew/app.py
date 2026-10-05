@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import time
 import webbrowser
 from datetime import datetime
 
@@ -42,6 +43,17 @@ def api_save_config():
     """保存配置的 API 端点"""
     try:
         raw_data = request.json
+        # 今日累计使用数据由守护进程维护，前端提交的配置里可能带着
+        # 页面加载时的旧快照，直接写入会把计时器"拨回去"（更新慢/倒退的根因之一）。
+        # 这里以磁盘上的最新值为准，覆盖请求中的累计字段。
+        try:
+            current = load_config()
+            if isinstance(raw_data, dict):
+                raw_data['total_usage_seconds'] = current.total_usage_seconds
+                raw_data['total_usage_date'] = current.total_usage_date
+                raw_data['total_usage_saved_at'] = current.total_usage_saved_at
+        except Exception:
+            pass
         # Pydantic 会自动验证和解析数据
         config = AppConfig(**raw_data)
         save_config(config)
@@ -77,6 +89,19 @@ def api_get_status():
                 is_banned = True
                 ban_remaining_seconds = int((banned_dt - datetime.now()).total_seconds())
 
+        # ---- 今日总使用时间：实时外推 ----
+        # 持久化的 total_usage_seconds 每隔几秒才落盘一次。为了让仪表板
+        # "更新及时"，这里用上次落盘的时间戳，按真实墙钟流逝线性外推。
+        total_usage = config.total_usage_seconds
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        if config.total_usage_date == today_str and config.total_usage_saved_at > 0:
+            elapsed = int(time.time() - config.total_usage_saved_at)
+            if elapsed > 0:
+                total_usage = config.total_usage_seconds + elapsed
+        else:
+            # 配置还没记录今天（守护进程未运行或跨天），今天从 0 开始
+            total_usage = 0
+
         data = jsonify({
             'date_type': date_type,
             'is_in_curfew': is_in_curfew,
@@ -85,9 +110,9 @@ def api_get_status():
             'banned_until': banned_until,
             'is_banned': is_banned,
             'ban_remaining_seconds': ban_remaining_seconds,
-            'total_usage_seconds': config.total_usage_seconds,
+            'total_usage_seconds': total_usage,
             'total_usage_limit': getattr(config.total_usage_limits, date_type),
-            'total_usage_remaining_seconds': max(0, getattr(config.total_usage_limits, date_type, 0) * 60 - config.total_usage_seconds)
+            'total_usage_remaining_seconds': max(0, getattr(config.total_usage_limits, date_type, 0) * 60 - total_usage)
         })
         return data
     except FileNotFoundError as e:

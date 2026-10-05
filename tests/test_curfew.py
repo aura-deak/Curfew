@@ -5,7 +5,20 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
-from curfew.timer import get_active_time
+from curfew.timer import get_active_time, clear_active_time_cache
+
+
+@pytest.fixture(autouse=True)
+def _fresh_active_time_cache():
+    """每个用例前清空 get_active_time 的缓存，保证用例之间相互独立。
+
+    get_active_time() 现带 TTL 缓存（避免每循环都启动 journalctl 子进程，
+    这是总使用时间"走时慢"的根因）。因此用例前需清理缓存，才能验证
+    每次都真实采样 subprocess / /proc/uptime 的行为。
+    """
+    clear_active_time_cache()
+    yield
+    clear_active_time_cache()
 
 
 def test_get_uptime_seconds():
