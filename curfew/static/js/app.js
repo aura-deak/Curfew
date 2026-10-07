@@ -22,6 +22,18 @@ async function apiPost(endpoint, data) {
     return await response.json();
 }
 
+async function apiDelete(endpoint) {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'DELETE',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const detail = data && data.error ? data.error : `API Error: ${response.status}`;
+        throw new Error(detail);
+    }
+    return data;
+}
+
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -120,7 +132,10 @@ async function updateStatus() {
         }
 
         if (consecutiveLimitEl) {
-            const limit = config?.continuous_usage_limits?.[status.date_type] || 0;
+            // 单日设定优先：/api/status 已按生效来源给出 continuous_usage_limit
+            const limit = (status.continuous_usage_limit !== undefined)
+                ? status.continuous_usage_limit
+                : (config?.continuous_usage_limits?.[status.date_type] || 0);
             consecutiveLimitEl.textContent = limit > 0 ? `${limit} 分钟` : '无限制';
         }
 
@@ -189,8 +204,17 @@ async function updateStatus() {
 async function loadScheduleForToday() {
     try {
         const status = await apiGet('/api/status');
-        const config = await apiGet('/api/config');
-        const periods = config.restricted_hours[status.date_type] || [];
+        let periods;
+        if (status.effective_source === 'override') {
+            // 今日命中单日设定：预览单日设定的限制时段
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const override = await apiGet(`/api/daily/${dateStr}`);
+            periods = override.time_ranges || [];
+        } else {
+            const config = await apiGet('/api/config');
+            periods = config.restricted_hours[status.date_type] || [];
+        }
 
         const timeBarContainer = document.getElementById('time-bar-container');
         renderTimeBar(periods, timeBarContainer);

@@ -394,3 +394,149 @@ select:focus {
         grid-template-columns: 1fr;
     }
 }
+
+/* =====================  calendula 单日设定日历 ===================== */
+#daily-calendar-wrapper {
+    min-width: 340px;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.calendar-nav-btn {
+    padding: 0.2rem 0.7rem;
+    font-size: 1.1rem;
+    line-height: 1.2;
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-head {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding: 0.3rem 0;
+    font-weight: 600;
+}
+
+.cal-cell {
+    position: relative;
+    min-height: 46px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--bg-card);
+    font: inherit;
+    color: inherit;
+    cursor: default;
+}
+
+.cal-empty {
+    background: transparent;
+    border: none;
+}
+
+.cal-day {
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+.cal-day:hover {
+    border-color: var(--accent-blue);
+    transform: translateY(-1px);
+}
+
+.cal-daynum {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* 休息日（法定节假日/周末）淡绿，调休上班淡黄 */
+.cal-rest {
+    background: rgba(34, 197, 94, 0.10);
+}
+
+.cal-inlieu {
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.cal-today {
+    border-color: var(--accent-blue);
+}
+
+.cal-selected {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+.cal-mark {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-size: 0.62rem;
+    line-height: 1;
+    padding: 1px 3px;
+    border-radius: 4px;
+}
+
+.cal-mark-rest {
+    background: var(--accent-green);
+    color: #fff;
+}
+
+.cal-mark-work {
+    background: var(--accent-yellow);
+    color: #fff;
+}
+
+.cal-dot {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.cal-dot-set {
+    background: var(--accent-purple);
+}
+
+.cal-dot-today {
+    background: var(--accent-blue);
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.calendar-legend .cal-mark,
+.calendar-legend .cal-dot {
+    position: static;
+    display: inline-block;
+    transform: none;
+    margin-right: 2px;
+}
+
+.calendar-legend .cal-dot {
+    width: 8px;
+    height: 8px;
+}

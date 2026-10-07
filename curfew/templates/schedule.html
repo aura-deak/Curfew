@@ -31,6 +31,7 @@
             <button class="tab active" onclick="switchTab('workday')">📅 工作日</button>
             <button class="tab" onclick="switchTab('weekend')">🎉 周末</button>
             <button class="tab" onclick="switchTab('holiday')">🏖️ 节假日</button>
+            <button class="tab" onclick="switchTab('daily')">🗓️ 单日设定</button>
         </div>
 
         <div id="tab-workday" class="tab-content active">
@@ -168,6 +169,35 @@
             </div>
         </div>
 
+        <div id="tab-daily" class="tab-content">
+            <div class="card">
+                <h2>🗓️ 单日设定</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    点击日历中的日期，为这一天单独设置限制时段、连续使用限制与每日总使用限制。
+                    单日设定的优先级高于「工作日 / 周末 / 节假日」设定，命中后完全替代日期类型设定；0 表示不启用。
+                </p>
+                <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+                    <div id="daily-calendar-wrapper">
+                        <div class="calendar-header">
+                            <button class="btn btn-secondary calendar-nav-btn" onclick="shiftCalendarMonth(-1)">‹</button>
+                            <span id="calendar-title" style="font-weight: 600; min-width: 8em; text-align: center;"></span>
+                            <button class="btn btn-secondary calendar-nav-btn" onclick="shiftCalendarMonth(1)">›</button>
+                        </div>
+                        <div id="daily-calendar" class="calendar"></div>
+                        <div class="calendar-legend">
+                            <span><span class="cal-mark cal-mark-rest">休</span> 放假</span>
+                            <span><span class="cal-mark cal-mark-work">班</span> 调休上班</span>
+                            <span><span class="cal-dot cal-dot-set"></span> 已设单日设定</span>
+                            <span><span class="cal-dot cal-dot-today"></span> 今天</span>
+                        </div>
+                    </div>
+                    <div id="daily-editor" style="flex: 1; min-width: 320px;">
+                        <p style="color: var(--text-secondary);">请在左侧日历选择一个日期。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
             <a href="/" class="btn btn-secondary">返回主页</a>
             <button class="btn btn-primary" onclick="saveAllPeriods()">💾 保存配置</button>
@@ -204,6 +234,10 @@
 
             document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'daily') {
+                loadDailyCalendar();
+            }
         }
 
         function renderPeriods(tabName) {
@@ -359,7 +393,252 @@
             renderPeriods('holiday');
         }
 
+        // ===================== 单日设定（日历 + 编辑面板） =====================
+
+        // 日历状态
+        let calendarYear = null;
+        let calendarMonth = null;      // 1-12
+        let calendarDays = [];         // 当前月份的日历信息
+        let dailyOverrides = [];       // 全部单日设定
+        let selectedDate = null;       // 当前选中的日期 YYYY-MM-DD
+        let dailyPeriods = [];         // 选中日期的限制时段（编辑中的草稿）
+        let selectedOverride = null;   // 选中日期的单日设定（含 exists 标记）
+
+        const WEEKDAY_HEADERS = ['一', '二', '三', '四', '五', '六', '日'];
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function findOverride(dateStr) {
+            return dailyOverrides.find(o => o.date === dateStr) || null;
+        }
+
+        function findDayInfo(dateStr) {
+            return calendarDays.find(d => d.date === dateStr) || null;
+        }
+
+        function todayStr() {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        }
+
+        async function loadDailyCalendar() {
+            const now = new Date();
+            if (calendarYear === null) {
+                calendarYear = now.getFullYear();
+                calendarMonth = now.getMonth() + 1;
+            }
+            await refreshDailyCalendar();
+        }
+
+        async function refreshDailyCalendar() {
+            try {
+                const [cal, overrides] = await Promise.all([
+                    apiGet(`/api/daily/calendar?year=${calendarYear}&month=${calendarMonth}`),
+                    apiGet('/api/daily'),
+                ]);
+                calendarDays = cal.days || [];
+                dailyOverrides = Array.isArray(overrides) ? overrides : [];
+                renderDailyCalendar();
+                if (selectedDate) {
+                    renderDailyEditor();
+                }
+            } catch (error) {
+                showNotification('加载日历失败', 'error');
+                console.error(error);
+            }
+        }
+
+        function shiftCalendarMonth(delta) {
+            calendarMonth += delta;
+            if (calendarMonth < 1) { calendarMonth = 12; calendarYear -= 1; }
+            if (calendarMonth > 12) { calendarMonth = 1; calendarYear += 1; }
+            refreshDailyCalendar();
+        }
+
+        function renderDailyCalendar() {
+            const titleEl = document.getElementById('calendar-title');
+            const gridEl = document.getElementById('daily-calendar');
+            if (!titleEl || !gridEl) return;
+
+            titleEl.textContent = `${calendarYear} 年 ${calendarMonth} 月`;
+
+            const today = todayStr();
+            let html = WEEKDAY_HEADERS.map(w => `<div class="cal-head">${w}</div>`).join('');
+
+            // 月份起始空白（周一为第一列）
+            const firstWeekday = calendarDays.length ? calendarDays[0].weekday : 0;
+            for (let i = 0; i < firstWeekday; i++) {
+                html += '<div class="cal-cell cal-empty"></div>';
+            }
+
+            calendarDays.forEach(day => {
+                const classes = ['cal-cell', 'cal-day'];
+                if (day.is_rest_day) {
+                    classes.push('cal-rest');
+                } else if (day.mark === '班') {
+                    classes.push('cal-inlieu');
+                }
+                if (day.date === today) classes.push('cal-today');
+                if (day.date === selectedDate) classes.push('cal-selected');
+                if (findOverride(day.date)) classes.push('cal-set');
+
+                const tooltipParts = [];
+                if (day.holiday_name) tooltipParts.push(day.holiday_name);
+                if (findOverride(day.date)) tooltipParts.push('已设单日设定');
+
+                html += `
+                    <button type="button" class="${classes.join(' ')}"
+                            title="${escapeHtml(tooltipParts.join(' · '))}"
+                            onclick="selectDailyDate('${day.date}')">
+                        <span class="cal-daynum">${parseInt(day.date.slice(8), 10)}</span>
+                        ${day.mark ? `<span class="cal-mark ${day.mark === '休' ? 'cal-mark-rest' : 'cal-mark-work'}">${day.mark}</span>` : ''}
+                        ${findOverride(day.date) ? '<span class="cal-dot cal-dot-set"></span>' : ''}
+                    </button>`;
+            });
+
+            gridEl.innerHTML = html;
+        }
+
+        async function selectDailyDate(dateStr) {
+            selectedDate = dateStr;
+            try {
+                const override = await apiGet(`/api/daily/${dateStr}`);
+                dailyPeriods = (override.time_ranges || []).map(p => ({ ...p }));
+                selectedOverride = override;
+                renderDailyCalendar();
+                renderDailyEditor();
+            } catch (error) {
+                showNotification('加载该日设定失败', 'error');
+                console.error(error);
+            }
+        }
+
+        function renderDailyEditor() {
+            const editorEl = document.getElementById('daily-editor');
+            if (!editorEl || !selectedDate) return;
+
+            const dayInfo = findDayInfo(selectedDate) || {};
+            const override = selectedOverride;
+            const sourceName = override && override.exists ? '单日设定' : '日期类型';
+            const dateTypeName = getDateTypeName(dayInfo.date_type || '');
+            const holidayNote = dayInfo.holiday_name ? ` · ${dayInfo.holiday_name}` : '';
+
+            const contVal = override && override.exists ? (override.continuous_limit_minutes || 0) : 0;
+            const totalVal = override && override.exists ? (override.daily_total_limit_minutes || 0) : 0;
+
+            let periodsHtml = '';
+            if (dailyPeriods.length === 0) {
+                periodsHtml = '<li class="empty-state" style="padding: 0.6rem; list-style: none;"><p style="margin:0;">暂无限制时段</p></li>';
+            } else {
+                periodsHtml = dailyPeriods.map((p, i) => `
+                    <li class="period-item" style="list-style: none;">
+                        <span class="period-time">${formatTime(p.start_hour, p.start_minute)} - ${formatTime(p.end_hour, p.end_minute)}</span>
+                        <div class="period-actions">
+                            <button type="button" class="btn btn-danger" onclick="removeDailyPeriod(${i})">🗑️ 删除</button>
+                        </div>
+                    </li>`).join('');
+            }
+
+            editorEl.innerHTML = `
+                <h3>📌 ${escapeHtml(selectedDate)}</h3>
+                <p style="color: var(--text-secondary);">
+                    当天类型：<strong>${escapeHtml(dateTypeName)}</strong>${escapeHtml(holidayNote)}
+                    · 生效来源：<strong>${escapeHtml(sourceName)}</strong>
+                </p>
+                <div style="margin-top: 1rem;">
+                    <h4 style="margin-bottom: 0.6rem; font-size: 1rem;">🕐 限制时段</h4>
+                    <ul class="period-list" style="padding: 0; list-style: none;">${periodsHtml}</ul>
+                    <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-top: 0.6rem; flex-wrap: wrap;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>开始</label>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <input type="number" id="daily-start-hour" min="0" max="23" placeholder="时" style="width: 70px;">
+                                <input type="number" id="daily-start-minute" min="0" max="59" placeholder="分" style="width: 70px;">
+                            </div>
+                        </div>
+                        <span style="padding-bottom: 0.7rem;">至</span>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>结束</label>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <input type="number" id="daily-end-hour" min="0" max="23" placeholder="时" style="width: 70px;">
+                                <input type="number" id="daily-end-minute" min="0" max="59" placeholder="分" style="width: 70px;">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addDailyPeriod()">➕ 添加</button>
+                    </div>
+                </div>
+                <div style="margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 0.6rem; font-size: 1rem;">⏱️ 连续使用限制（分钟，0 不启用）</h4>
+                    <input type="number" id="daily-cont-limit" min="0" placeholder="0 表示不启用" style="width: 120px;" value="${contVal}">
+                </div>
+                <div style="margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <h4 style="margin-bottom: 0.6rem; font-size: 1rem;">📊 每日总使用限制（分钟，0 不启用）</h4>
+                    <input type="number" id="daily-total-limit" min="0" placeholder="0 表示不启用" style="width: 120px;" value="${totalVal}">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-danger" onclick="deleteDailyOverride()">🗑️ 删除本日设定</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDailyOverride()">💾 保存单日设定</button>
+                </div>`;
+        }
+
+        function addDailyPeriod() {
+            const sh = parseInt(document.getElementById('daily-start-hour').value);
+            const sm = parseInt(document.getElementById('daily-start-minute').value);
+            const eh = parseInt(document.getElementById('daily-end-hour').value);
+            const em = parseInt(document.getElementById('daily-end-minute').value);
+            if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) {
+                showNotification('请填写完整的时间', 'error');
+                return;
+            }
+            dailyPeriods.push({ start_hour: sh, start_minute: sm, end_hour: eh, end_minute: em });
+            renderDailyEditor();
+        }
+
+        function removeDailyPeriod(index) {
+            dailyPeriods.splice(index, 1);
+            renderDailyEditor();
+        }
+
+        async function saveDailyOverride() {
+            if (!selectedDate) return;
+            const payload = {
+                date: selectedDate,
+                time_ranges: dailyPeriods,
+                continuous_limit_minutes: parseInt(document.getElementById('daily-cont-limit').value) || 0,
+                daily_total_limit_minutes: parseInt(document.getElementById('daily-total-limit').value) || 0,
+            };
+            try {
+                await apiPost('/api/daily', payload);
+                await refreshDailyCalendar();
+                selectedOverride = { ...payload, exists: true };
+                renderDailyEditor();
+                showNotification('单日设定已保存', 'success');
+            } catch (error) {
+                showNotification(error.message || '保存单日设定失败', 'error');
+            }
+        }
+
+        async function deleteDailyOverride() {
+            if (!selectedDate) return;
+            if (!confirm(`确定删除 ${selectedDate} 的单日设定吗？该天将恢复按日期类型限制。`)) return;
+            try {
+                await apiDelete(`/api/daily/${selectedDate}`);
+                await refreshDailyCalendar();
+                selectedOverride = { date: selectedDate, time_ranges: [], continuous_limit_minutes: 0, daily_total_limit_minutes: 0, exists: false };
+                dailyPeriods = [];
+                renderDailyEditor();
+                showNotification('已删除，恢复按日期类型限制', 'success');
+            } catch (error) {
+                showNotification(error.message || '删除单日设定失败', 'error');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', loadPeriods);
+        loadDailyCalendar();
     </script>
 </body>
 </html>

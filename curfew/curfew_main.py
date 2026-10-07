@@ -58,6 +58,95 @@ def is_in_restricted_hours(
         return now >= start_time or now <= end_time
 
 
+def _time_slots_to_dicts(slots) -> list:
+    """把 TimeSlot 对象列表或字典列表统一为字典列表。"""
+    result = []
+    for p in slots:
+        if hasattr(p, 'start_hour'):
+            result.append({
+                'start_hour': p.start_hour,
+                'start_minute': p.start_minute,
+                'end_hour': p.end_hour,
+                'end_minute': p.end_minute,
+            })
+        else:
+            result.append({
+                'start_hour': p['start_hour'],
+                'start_minute': p['start_minute'],
+                'end_hour': p['end_hour'],
+                'end_minute': p['end_minute'],
+            })
+    return result
+
+
+def _is_in_slots_now(slots: list, now_time=None) -> bool:
+    """判断当前时间是否落在任意限制时段内。"""
+    if now_time is None:
+        now_time = datetime.datetime.now().time()
+    for p in slots:
+        start_time = datetime.time(p['start_hour'], p['start_minute'])
+        end_time = datetime.time(p['end_hour'], p['end_minute'])
+        if start_time < end_time:
+            if start_time <= now_time <= end_time:
+                return True
+        else:
+            if now_time >= start_time or now_time <= end_time:
+                return True
+    return False
+
+
+def _is_within_five_minutes_of_slots_now(slots: list, now_time=None) -> bool:
+    """判断当前时间是否在任一限制时段开始前 5 分钟内。"""
+    if now_time is None:
+        now_time = datetime.datetime.now().time()
+    for p in slots:
+        start_time = datetime.time(p['start_hour'], p['start_minute'])
+        five_later = (
+            datetime.datetime.combine(datetime.date.today(), start_time)
+            + datetime.timedelta(minutes=5)
+        ).time()
+        if start_time <= now_time <= five_later:
+            return True
+    return False
+
+
+def _ov_get(override, key, default=None):
+    """读取单日设定字段，同时兼容 DailyOverride 模型与原始字典。"""
+    if isinstance(override, dict):
+        return override.get(key, default)
+    return getattr(override, key, default)
+
+
+def get_effective_schedules_for_date(config: AppConfig, date: datetime.date):
+    """获取某日生效的限制设定。
+
+    单日设定（daily_overrides）优先级最高：命中该日期时，限制时段 / 连续使用限制 /
+    每日总限制全部以单日设定为准，完全替代日期类型设定。未命中则回退到日期类型
+    （工作日/周末/节假日）。
+
+    Returns:
+        (time_slots, continuous_limit_minutes, total_limit_minutes, source)
+        time_slots: 字典列表 [{start_hour, start_minute, end_hour, end_minute}]
+        source: 'override' 表示命中单日设定，否则为日期类型名（workday/weekend/holiday）
+    """
+    date_str = date.strftime('%Y-%m-%d')
+    for o in config.daily_overrides:
+        if _ov_get(o, 'date') == date_str:
+            return (
+                _time_slots_to_dicts(_ov_get(o, 'time_ranges', []) or []),
+                _ov_get(o, 'continuous_limit_minutes', 0) or 0,
+                _ov_get(o, 'daily_total_limit_minutes', 0) or 0,
+                'override',
+            )
+    dt = get_date_type(date)
+    return (
+        _time_slots_to_dicts(getattr(config.restricted_hours, dt)),
+        getattr(config.continuous_usage_limits, dt),
+        getattr(config.total_usage_limits, dt),
+        dt,
+    )
+
+
 def is_in_restricted_hours_for_today(restricted_hours) -> bool:
     """判断当前时间是否在今天的禁用时段内
     
@@ -262,13 +351,18 @@ def main(config: AppConfig) -> None:
                 save_config(config)
                 continue
 
-        if is_in_restricted_hours_for_today(restricted_hours):
+        # 今天生效的限制：优先单日设定，其次日期类型
+        effective_slots, effective_continuous, effective_total, effective_source = (
+            get_effective_schedules_for_date(config, datetime.datetime.now().date())
+        )
+
+        if _is_in_slots_now(effective_slots):
             print("检测到当前时间在禁用时段内")
             if not config.banned_until:
                 config.banned_until = _compute_banned_until(config.ban_duration_minutes)
                 save_config(config)
             break
-        elif is_is_within_five_minutes_of_restricted_time_for_today(restricted_hours):
+        elif _is_within_five_minutes_of_slots_now(effective_slots):
             plyer.notification.notify(
                 title="Curfew 提醒",
                 message="距离禁用时段开始还有不到 5 分钟，请保存工作并准备关机。",
@@ -277,7 +371,7 @@ def main(config: AppConfig) -> None:
             print("距离禁用时段开始还有不到 5 分钟")
         else:
             current_date_type = get_date_type()
-            current_limit = getattr(continuous_usage_limits, current_date_type)
+            current_limit = effective_continuous
             uptime_seconds = get_active_time()
 
             if current_limit > 0:
@@ -298,7 +392,7 @@ def main(config: AppConfig) -> None:
                     remind_times = 1
                     print(f"距离连续使用时间限制结束还有不到 5 分钟")
             
-            total_limit = getattr(total_usage_limits, current_date_type)
+            total_limit = effective_total
 
             # ---- 总使用时间：按墙钟流逝时间累加，不随循环耗时漂移 ----
             if config.total_usage_date != today_str:

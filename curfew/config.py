@@ -10,7 +10,7 @@ import json
 import os
 import threading
 import time
-from typing import Callable, List, Literal
+from typing import Callable, Dict, List, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -48,6 +48,27 @@ class TotalUsageLimits(BaseModel):
     holiday: int = Field(default=0, ge=0, description="节假日总使用限制（分钟）")
 
 
+# ========== 单日设定模型 ==========
+class DailyOverride(BaseModel):
+    """单日设定 - 针对某个特定日期的限制规则。
+
+    命中该日期的当天，限制时段 / 连续使用限制 / 每日总限制全部以本设定为准，
+    完全替代日期类型（工作日/周末/节假日）的对应设定。
+    0 表示不启用对应限制。
+    """
+    date: str = Field(..., description="目标日期（YYYY-MM-DD）")
+    time_ranges: List[TimeSlot] = Field(
+        default_factory=list,
+        description="限制时段列表，每项 {'start_hour': h, 'start_minute': m, 'end_hour': h, 'end_minute': m}"
+    )
+    continuous_limit_minutes: int = Field(
+        default=0, ge=0, description="连续使用限制（分钟），0 表示不启用"
+    )
+    daily_total_limit_minutes: int = Field(
+        default=0, ge=0, description="每日总使用限制（分钟），0 表示不启用"
+    )
+
+
 # ========== 主配置模型 ==========
 class AppConfig(BaseModel):
     """应用主配置模型"""
@@ -70,6 +91,10 @@ class AppConfig(BaseModel):
     total_usage_limits: TotalUsageLimits = Field(
         default_factory=TotalUsageLimits,
         description="每日总使用时间限制"
+    )
+    daily_overrides: List[DailyOverride] = Field(
+        default_factory=list,
+        description="单日设定列表（优先级高于日期类型设定）"
     )
     total_usage_seconds: int = Field(default=0, ge=0, description="当日累计使用秒数")
     total_usage_date: str = Field(default="", description="当前累计对应的日期（YYYY-MM-DD）")
@@ -198,7 +223,73 @@ def create_default_config(
         restricted_hours=RestrictedHours(),
         continuous_usage_limits=ContinuousUsageLimits(),
         total_usage_limits=TotalUsageLimits(),
+        daily_overrides=[],
         ban_duration_minutes=ban_duration_minutes,
         banned_until=banned_until,
         debug=False
     )
+
+
+# ========== 便捷函数：单日设定读写 ==========
+def get_daily_override(date_str: str) -> Dict | None:
+    """获取指定日期的单日设定；无则返回 None。
+
+    Args:
+        date_str: 日期字符串（YYYY-MM-DD）
+
+    Returns:
+        Dict | None: 单日设定字典（含 date/time_ranges/continuous_limit_minutes/
+                     daily_total_limit_minutes），未命中返回 None
+    """
+    try:
+        config = load_config()
+    except (FileNotFoundError, ValueError):
+        return None
+    for override in config.daily_overrides:
+        if override.date == date_str:
+            return override.model_dump()
+    return None
+
+
+def set_daily_override(override: Dict) -> bool:
+    """新增或覆盖指定日期的单日设定，并保存。返回是否成功。
+
+    Args:
+        override: 单日设定字典，必须含 date 字段
+    """
+    try:
+        config = load_config()
+    except (FileNotFoundError, ValueError):
+        config = AppConfig()
+    date_str = override.get("date")
+    if not date_str:
+        return False
+    validated = DailyOverride(**override)
+    config.daily_overrides = [
+        o for o in config.daily_overrides if o.date != date_str
+    ]
+    config.daily_overrides.append(validated)
+    try:
+        save_config(config)
+        return True
+    except IOError:
+        return False
+
+
+def delete_daily_override(date_str: str) -> bool:
+    """删除指定日期的单日设定并保存。返回是否成功。"""
+    try:
+        config = load_config()
+    except (FileNotFoundError, ValueError):
+        return False
+    before = len(config.daily_overrides)
+    config.daily_overrides = [
+        o for o in config.daily_overrides if o.date != date_str
+    ]
+    if len(config.daily_overrides) == before:
+        return False
+    try:
+        save_config(config)
+        return True
+    except IOError:
+        return False
