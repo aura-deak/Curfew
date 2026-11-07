@@ -207,8 +207,8 @@ async function loadScheduleForToday() {
         let periods;
         if (status.effective_source === 'override') {
             // 今日命中单日设定：预览单日设定的限制时段
-            const today = new Date();
-            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            // "今天"以服务端（网络时间）为准，不依赖浏览器本地时钟
+            const dateStr = status.today;
             const override = await apiGet(`/api/daily/${dateStr}`);
             periods = override.time_ranges || [];
         } else {

@@ -33,10 +33,10 @@ def test_get_date_type_holiday():
         assert get_date_type(date) == 'holiday'
 
 def test_get_date_type_default_now():
-    with patch('curfew.date_type.datetime') as mock_datetime:
-        mock_datetime.datetime.now.return_value.date.return_value = datetime.date(2024, 1, 15)
-    
-    with patch('curfew.date_type.is_workday') as mock_is_workday:
-        mock_is_workday.return_value = True
-        
-        assert get_date_type() == 'workday'
+    with patch('curfew.date_type.network_time.today') as mock_today:
+        mock_today.return_value = datetime.date(2024, 1, 15)
+
+        with patch('curfew.date_type.is_workday') as mock_is_workday:
+            mock_is_workday.return_value = True
+
+            assert get_date_type() == 'workday'

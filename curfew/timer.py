@@ -9,6 +9,8 @@ import subprocess
 import time
 from datetime import datetime
 
+from curfew import network_time
+
 _cache_last_epoch = None  # 上次采样到的"最后唤醒时刻"（Unix 秒）
 _cache_base_active = None # 采样时刻对应的活跃秒数
 _cache_sample_at = 0.0    # 采样时的墙钟时间
@@ -37,7 +39,7 @@ def _sample_active_seconds() -> int:
             timestamp_str = last_line.split()[0]
             # 转为 Unix 时间戳（秒）
             last_epoch = datetime.fromisoformat(timestamp_str).timestamp()
-            now = time.time()
+            now = network_time.epoch()
             return int(now - last_epoch)
     except Exception:
         # 如果 journalctl 执行出错（如命令不存在、超时），则直接回退
@@ -57,7 +59,7 @@ def get_active_time():
     """
     global _cache_last_epoch, _cache_base_active, _cache_sample_at
 
-    now = time.time()
+    now = network_time.epoch()
     if (
         _cache_base_active is not None
         and (now - _cache_sample_at) < _CACHE_TTL

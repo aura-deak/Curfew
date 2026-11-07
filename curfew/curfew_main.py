@@ -9,6 +9,7 @@ from datetime import timedelta
 
 import plyer
 
+from curfew import network_time
 from curfew.config import load_config, save_config, AppConfig
 from curfew.date_type import get_date_type
 from curfew.shutdown import shutdown
@@ -17,12 +18,12 @@ from curfew.timer import get_active_time
 
 def _compute_banned_until(ban_duration_minutes: int) -> str:
     """计算禁用到期时间的 ISO 格式字符串"""
-    return (datetime.datetime.now() + timedelta(minutes=ban_duration_minutes)).isoformat()
+    return (network_time.now() + timedelta(minutes=ban_duration_minutes)).isoformat()
 
 
 def _is_banned_period_active(banned_until_str: str) -> bool:
     """判断禁用期是否仍在活跃状态"""
-    return datetime.datetime.now() < datetime.datetime.fromisoformat(banned_until_str)
+    return network_time.now() < datetime.datetime.fromisoformat(banned_until_str)
 
 
 def signal_handler(signum: int, frame) -> None:
@@ -48,7 +49,7 @@ def is_in_restricted_hours(
     Returns:
         bool: 是否在时间段内
     """
-    now = datetime.datetime.now().time()
+    now = network_time.now().time()
     start_time = datetime.time(start_hour, start_minute)
     end_time = datetime.time(end_hour, end_minute)
 
@@ -82,7 +83,7 @@ def _time_slots_to_dicts(slots) -> list:
 def _is_in_slots_now(slots: list, now_time=None) -> bool:
     """判断当前时间是否落在任意限制时段内。"""
     if now_time is None:
-        now_time = datetime.datetime.now().time()
+        now_time = network_time.now().time()
     for p in slots:
         start_time = datetime.time(p['start_hour'], p['start_minute'])
         end_time = datetime.time(p['end_hour'], p['end_minute'])
@@ -98,11 +99,11 @@ def _is_in_slots_now(slots: list, now_time=None) -> bool:
 def _is_within_five_minutes_of_slots_now(slots: list, now_time=None) -> bool:
     """判断当前时间是否在任一限制时段开始前 5 分钟内。"""
     if now_time is None:
-        now_time = datetime.datetime.now().time()
+        now_time = network_time.now().time()
     for p in slots:
         start_time = datetime.time(p['start_hour'], p['start_minute'])
         five_later = (
-            datetime.datetime.combine(datetime.date.today(), start_time)
+            datetime.datetime.combine(network_time.today(), start_time)
             + datetime.timedelta(minutes=5)
         ).time()
         if start_time <= now_time <= five_later:
@@ -201,10 +202,10 @@ def is_within_five_minutes_of_restricted_time(
     Returns:
         bool: 是否在 5 分钟内
     """
-    now = datetime.datetime.now().time()
+    now = network_time.now().time()
     start_time = datetime.time(start_hour, start_minute)
     five_minutes_later = (
-        datetime.datetime.combine(datetime.date.today(), start_time) + 
+        datetime.datetime.combine(network_time.today(), start_time) + 
         datetime.timedelta(minutes=5)
     ).time()
     return start_time <= now <= five_minutes_later
@@ -319,15 +320,15 @@ def main(config: AppConfig) -> None:
         try:
             fresh = load_config()
             fresh.total_usage_seconds = total_seconds
-            fresh.total_usage_saved_at = time.time()
-            if fresh.total_usage_date != datetime.datetime.now().strftime('%Y-%m-%d'):
-                fresh.total_usage_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            fresh.total_usage_saved_at = network_time.epoch()
+            if fresh.total_usage_date != network_time.now().strftime('%Y-%m-%d'):
+                fresh.total_usage_date = network_time.now().strftime('%Y-%m-%d')
             if extra:
                 for key, value in extra.items():
                     setattr(fresh, key, value)
             save_config(fresh)
             last_saved_mono = time.monotonic()
-            last_saved_at = time.time()
+            last_saved_at = network_time.epoch()
             last_saved_value = total_seconds
             return True
         except Exception as exc:
@@ -341,7 +342,7 @@ def main(config: AppConfig) -> None:
         total_usage_limits = config.total_usage_limits
         debug = config.debug
 
-        today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+        today_str = network_time.now().strftime('%Y-%m-%d')
 
         if config.banned_until:
             if _is_banned_period_active(config.banned_until):
@@ -353,7 +354,7 @@ def main(config: AppConfig) -> None:
 
         # 今天生效的限制：优先单日设定，其次日期类型
         effective_slots, effective_continuous, effective_total, effective_source = (
-            get_effective_schedules_for_date(config, datetime.datetime.now().date())
+            get_effective_schedules_for_date(config, network_time.now().date())
         )
 
         if _is_in_slots_now(effective_slots):

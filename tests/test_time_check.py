@@ -6,39 +6,39 @@ import datetime
 
 def test_is_in_restricted_hours_within_range():
     test_time = datetime.time(10, 30)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(10, 0, 11, 0) == True
 
 
 def test_is_in_restricted_hours_before_range():
     test_time = datetime.time(9, 30)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(10, 0, 11, 0) == False
 
 
 def test_is_in_restricted_hours_after_range():
     test_time = datetime.time(11, 30)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(10, 0, 11, 0) == False
 
 
 def test_is_in_restricted_hours_cross_midnight():
     test_time = datetime.time(23, 30)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(22, 0, 2, 0) == True
 
     test_time = datetime.time(1, 30)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(22, 0, 2, 0) == True
 
     test_time = datetime.time(12, 0)
-    with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-        mock_datetime_class.now.return_value.time.return_value = test_time
+    with patch('curfew.curfew_main.network_time.now') as mock_now:
+        mock_now.return_value.time.return_value = test_time
         assert is_in_restricted_hours(22, 0, 2, 0) == False
 
 
@@ -53,13 +53,13 @@ def test_is_in_restricted_hours_for_today_workday():
         }
         
         test_time = datetime.time(10, 30)
-        with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-            mock_datetime_class.now.return_value.time.return_value = test_time
+        with patch('curfew.curfew_main.network_time.now') as mock_now:
+            mock_now.return_value.time.return_value = test_time
             assert is_in_restricted_hours_for_today(restricted_hours) == True
 
         test_time = datetime.time(9, 30)
-        with patch('curfew.curfew_main.datetime.datetime') as mock_datetime_class:
-            mock_datetime_class.now.return_value.time.return_value = test_time
+        with patch('curfew.curfew_main.network_time.now') as mock_now:
+            mock_now.return_value.time.return_value = test_time
             assert is_in_restricted_hours_for_today(restricted_hours) == False
 
 

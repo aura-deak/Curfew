@@ -4,6 +4,8 @@ import sys
 
 from chinese_calendar import get_holiday_detail, is_workday
 
+from curfew import network_time
+
 # 节假日英文名 → 中文名（chinese_calendar 返回的是英文名，日历上展示中文）
 _HOLIDAY_CN = {
     "New Year's Day": "元旦",
@@ -23,7 +25,7 @@ except ImportError:  # pragma: no cover
 
 def get_date_type(date=None):
     if date is None:
-        date = datetime.datetime.now().date()
+        date = network_time.today()
 
     if is_workday(date):
         return 'workday'
@@ -105,7 +107,7 @@ if __name__ == "__main__":
             print(f"无效的日期格式，请使用 YYYY-MM-DD 格式")
             sys.exit(1)
     else:
-        date = datetime.datetime.now().date()
+        date = network_time.today()
 
     result = get_date_type(date)
     print(f"{date} ({date.strftime('%A')}): {date_type_names[result]}")

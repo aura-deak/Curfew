@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import os
-import time
 import webbrowser
-from datetime import date, datetime
+from datetime import datetime
 
 from flask import Flask, render_template, jsonify, request
 
+from curfew import network_time
 from curfew.config import (
     load_config,
     save_config,
@@ -85,13 +85,14 @@ def api_get_status():
         config = load_config()
 
         date_type = get_date_type()
+        today_str = network_time.now().strftime('%Y-%m-%d')
         # 使用 config.restricted_hours 访问 RestrictedHours 对象
         # 今日生效限制：单日设定优先，否则日期类型
         eff_slots, eff_continuous, eff_total, eff_source = get_effective_schedules_for_date(
-            config, datetime.now().date()
+            config, network_time.now().date()
         )
         is_in_curfew = _is_in_slots_now(eff_slots)
-        now = datetime.now().strftime('%H:%M:%S')
+        now = network_time.now().strftime('%H:%M:%S')
         consecutive_seconds = get_active_time()
 
         banned_until = config.banned_until
@@ -99,17 +100,16 @@ def api_get_status():
         ban_remaining_seconds = 0
         if banned_until:
             banned_dt = datetime.fromisoformat(banned_until)
-            if datetime.now() < banned_dt:
+            if network_time.now() < banned_dt:
                 is_banned = True
-                ban_remaining_seconds = int((banned_dt - datetime.now()).total_seconds())
+                ban_remaining_seconds = int((banned_dt - network_time.now()).total_seconds())
 
         # ---- 今日总使用时间：实时外推 ----
         # 持久化的 total_usage_seconds 每隔几秒才落盘一次。为了让仪表板
         # "更新及时"，这里用上次落盘的时间戳，按真实墙钟流逝线性外推。
         total_usage = config.total_usage_seconds
-        today_str = datetime.now().strftime('%Y-%m-%d')
         if config.total_usage_date == today_str and config.total_usage_saved_at > 0:
-            elapsed = int(time.time() - config.total_usage_saved_at)
+            elapsed = int(network_time.epoch() - config.total_usage_saved_at)
             if elapsed > 0:
                 total_usage = config.total_usage_seconds + elapsed
         else:
@@ -118,6 +118,7 @@ def api_get_status():
 
         data = jsonify({
             'date_type': date_type,
+            'today': today_str,  # 以网络时间为准的今日日期（YYYY-MM-DD）
             'effective_source': eff_source,  # 'override' 表示今日命中单日设定
             'continuous_usage_limit': eff_continuous,
             'is_in_curfew': is_in_curfew,
@@ -142,8 +143,8 @@ def api_get_daily_calendar():
     """获取某月的日历信息（含节假日提示），供单日设定日历渲染。"""
     from curfew.date_type import get_month_calendar
     try:
-        year = request.args.get('year', type=int, default=date.today().year)
-        month = request.args.get('month', type=int, default=date.today().month)
+        year = request.args.get('year', type=int, default=network_time.today().year)
+        month = request.args.get('month', type=int, default=network_time.today().month)
         days = get_month_calendar(year, month)
         return jsonify({'year': year, 'month': month, 'days': days})
     except Exception as e:
